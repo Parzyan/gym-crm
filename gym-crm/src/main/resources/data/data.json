@@ -1,0 +1,42 @@
+{
+  "trainees": [
+    {
+      "id": 1,
+      "firstName": "Alice",
+      "lastName": "Smith",
+      "username": "Alice.Smith",
+      "password": "abc1234xyz",
+      "isActive": true,
+      "dateOfBirth": "2000-05-15",
+      "address": "255 Street"
+    }
+  ],
+  "trainers": [
+    {
+      "id": 1,
+      "firstName": "Bob",
+      "lastName": "Johnson",
+      "username": "Bob.Johnson",
+      "password": "password10",
+      "isActive": true,
+      "specialization": {
+        "id": 1,
+        "name": "Strength Training"
+      }
+    }
+  ],
+  "trainings": [
+    {
+      "id": 1,
+      "traineeId": 1,
+      "trainerId": 1,
+      "trainingName": "Beginner Program",
+      "trainingType": {
+        "id": 1,
+        "name": "Strength Training"
+      },
+      "trainingDate": "2024-06-01",
+      "duration": 60
+    }
+  ]
+}
