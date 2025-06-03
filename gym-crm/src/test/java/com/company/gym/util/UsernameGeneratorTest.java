@@ -1,7 +1,7 @@
 package com.company.gym.util;
 
+import com.company.gym.dao.BaseAndUpdateDAO;
 import com.company.gym.dao.TraineeDAO;
-import com.company.gym.dao.TrainerDAO;
 import com.company.gym.dao.impl.TraineeDAOImpl;
 import com.company.gym.dao.impl.TrainerDAOImpl;
 import com.company.gym.entity.Trainee;
@@ -20,7 +20,7 @@ class UsernameGeneratorTest {
     private UsernameGenerator usernameGenerator;
     private UserService userService;
     private TraineeDAO traineeDAO;
-    private TrainerDAO trainerDAO;
+    private BaseAndUpdateDAO<Trainer> trainerDAO;
     private Map<Long, Trainee> traineeStorage;
     private Map<Long, Trainer> trainerStorage;
 

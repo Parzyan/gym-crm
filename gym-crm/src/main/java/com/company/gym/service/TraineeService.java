@@ -13,7 +13,7 @@ import java.time.LocalDate;
 import java.util.Optional;
 
 @Service
-public class TraineeService extends AbstractBaseService<Trainee> {
+public class TraineeService extends AbstractFullCrudService<Trainee> {
     private static final Logger logger = LoggerFactory.getLogger(TraineeService.class);
 
     private UsernameGenerator usernameGenerator;
@@ -67,10 +67,5 @@ public class TraineeService extends AbstractBaseService<Trainee> {
         }
         logger.info("Trainee with id: {} not found", id);
         return null;
-    }
-
-    public void deleteTrainee(Long id) {
-        traineeDAO.delete(id);
-        logger.info("Trainee with id: {} deleted", id);
     }
 }

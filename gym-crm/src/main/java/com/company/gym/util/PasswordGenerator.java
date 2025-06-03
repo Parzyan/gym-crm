@@ -17,7 +17,6 @@ public class PasswordGenerator {
             password.append(CHARACTERS.charAt(RANDOM.nextInt(CHARACTERS.length())));
         }
 
-        String generatedPassword = password.toString();
-        return generatedPassword;
+        return password.toString();
     }
 }

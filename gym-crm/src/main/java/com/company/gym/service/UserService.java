@@ -1,7 +1,7 @@
 package com.company.gym.service;
 
+import com.company.gym.dao.BaseAndUpdateDAO;
 import com.company.gym.dao.TraineeDAO;
-import com.company.gym.dao.TrainerDAO;
 import com.company.gym.entity.Trainee;
 import com.company.gym.entity.Trainer;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,7 +12,7 @@ import java.util.List;
 @Service
 public class UserService {
     private TraineeDAO traineeDAO;
-    private TrainerDAO trainerDAO;
+    private BaseAndUpdateDAO<Trainer> trainerDAO;
 
     @Autowired
     public void setTraineeDAO(TraineeDAO traineeDAO) {
@@ -20,7 +20,7 @@ public class UserService {
     }
 
     @Autowired
-    public void setTrainerDAO(TrainerDAO trainerDAO) {
+    public void setTrainerDAO(BaseAndUpdateDAO<Trainer> trainerDAO) {
         this.trainerDAO = trainerDAO;
     }
 

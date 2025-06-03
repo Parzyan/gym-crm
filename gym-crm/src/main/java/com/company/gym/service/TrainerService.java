@@ -1,6 +1,6 @@
 package com.company.gym.service;
 
-import com.company.gym.dao.TrainerDAO;
+import com.company.gym.dao.BaseAndUpdateDAO;
 import com.company.gym.entity.Trainer;
 import com.company.gym.entity.TrainingType;
 import com.company.gym.util.PasswordGenerator;
@@ -13,15 +13,15 @@ import org.springframework.stereotype.Service;
 import java.util.Optional;
 
 @Service
-public class TrainerService extends AbstractBaseService<Trainer> {
+public class TrainerService extends AbstractBaseAndUpdateService<Trainer> {
     private static final Logger logger = LoggerFactory.getLogger(TrainerService.class);
 
     private UsernameGenerator usernameGenerator;
     private PasswordGenerator passwordGenerator;
-    private TrainerDAO trainerDAO;
+    private BaseAndUpdateDAO<Trainer> trainerDAO;
 
     @Autowired
-    public void setTrainerDAO(TrainerDAO trainerDAO) {
+    public void setTrainerDAO(BaseAndUpdateDAO<Trainer> trainerDAO) {
         this.trainerDAO = trainerDAO;
         super.setDao(trainerDAO);
     }

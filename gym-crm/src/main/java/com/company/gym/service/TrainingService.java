@@ -1,6 +1,6 @@
 package com.company.gym.service;
 
-import com.company.gym.dao.TrainingDAO;
+import com.company.gym.dao.BaseDAO;
 import com.company.gym.entity.Training;
 import com.company.gym.entity.TrainingType;
 import org.slf4j.Logger;
@@ -14,12 +14,12 @@ import java.time.LocalDate;
 public class TrainingService extends AbstractBaseService<Training> {
     private static final Logger logger = LoggerFactory.getLogger(TrainingService.class);
 
-    private TrainingDAO trainingDAO;
+    private BaseDAO<Training> trainingDAO;
 
     @Autowired
-    public void setTrainingDAO(TrainingDAO trainingDAO) {
+    public void setTrainingDAO(BaseDAO<Training> trainingDAO) {
         this.trainingDAO = trainingDAO;
-        super.setDao(trainingDAO); // Set the DAO in parent class
+        super.setDao(trainingDAO);
     }
 
     public Training createTraining(Long traineeId, Long trainerId, String trainingName,

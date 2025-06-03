@@ -1,6 +1,6 @@
 package com.company.gym.service;
 
-import com.company.gym.dao.TrainingDAO;
+import com.company.gym.dao.BaseDAO;
 import com.company.gym.dao.impl.TrainingDAOImpl;
 import com.company.gym.entity.Training;
 import com.company.gym.entity.TrainingType;
@@ -16,7 +16,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TrainingServiceTest {
     private TrainingService trainingService;
-    private TrainingDAO trainingDAO;
+    private BaseDAO<Training> trainingDAO;
     private Map<Long, Training> storage;
 
     @BeforeEach
@@ -29,10 +29,9 @@ public class TrainingServiceTest {
 
     @Test
     void createTraining() {
-        TrainingType specialization = TrainingType.Yoga;
-        assertThrows(IllegalArgumentException.class, () -> {
-            trainingService.createTraining(1L, 1L, "Yoga", specialization, LocalDate.now(), -10);
-        });
+        TrainingType specialization = TrainingType.YOGA;
+        assertThrows(IllegalArgumentException.class, () ->
+                trainingService.createTraining(1L, 1L, "Yoga", specialization, LocalDate.now(), -10));
     }
 
     @Test

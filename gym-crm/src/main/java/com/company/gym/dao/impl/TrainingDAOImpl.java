@@ -1,6 +1,6 @@
 package com.company.gym.dao.impl;
 
-import com.company.gym.dao.TrainingDAO;
+import com.company.gym.dao.BaseDAO;
 import com.company.gym.entity.Training;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -9,7 +9,7 @@ import org.springframework.stereotype.Repository;
 import java.util.*;
 
 @Repository
-public class TrainingDAOImpl implements TrainingDAO {
+public class TrainingDAOImpl implements BaseDAO<Training> {
     private final Map<Long, Training> storage;
     private long currentId = 1;
 

@@ -2,7 +2,6 @@ package com.company.gym;
 
 import com.company.gym.entity.Trainee;
 import com.company.gym.entity.Trainer;
-import com.company.gym.entity.Training;
 import com.company.gym.entity.TrainingType;
 import com.company.gym.facade.GymFacade;
 import org.slf4j.Logger;
@@ -29,11 +28,11 @@ public class GymCrmApplication implements CommandLineRunner {
 
 	@Override
 	public void run(String... args) {
-		Trainee trainee = gymFacade.createTrainee("Bob", "Johnson", LocalDate.of(1990, 1, 1), "123 Street");
-		Trainee trainee1 = gymFacade.createTrainee("Mike", "Johnson", LocalDate.of(1995, 1, 1), "124 Street");
+		gymFacade.createTrainee("Bob", "Johnson", LocalDate.of(1990, 1, 1), "123 Street");
+		gymFacade.createTrainee("Mike", "Johnson", LocalDate.of(1995, 1, 1), "124 Street");
 
-		TrainingType specialization = TrainingType.Yoga;
-		Trainer trainer = gymFacade.createTrainer("Mike", "Johnson", specialization);
+		TrainingType specialization = TrainingType.YOGA;
+		gymFacade.createTrainer("Mike", "Johnson", specialization);
 
 		Optional<Trainee> a = gymFacade.getTrainee(2L);
 		Optional<Trainer> b = gymFacade.getTrainer(2L);
@@ -50,7 +49,7 @@ public class GymCrmApplication implements CommandLineRunner {
 			logger.warn("Trainer with the id of 2 not found");
 		}
 
-		Training training = gymFacade.createTraining(2L, 2L, "Introduction", specialization, LocalDate.now(), 25);
+		gymFacade.createTraining(2L, 2L, "Introduction", specialization, LocalDate.now(), 25);
 
 		gymFacade.updateTrainee(1L, false, "123 Street");
 

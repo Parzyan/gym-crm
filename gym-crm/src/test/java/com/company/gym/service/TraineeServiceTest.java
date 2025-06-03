@@ -1,7 +1,7 @@
 package com.company.gym.service;
 
+import com.company.gym.dao.BaseAndUpdateDAO;
 import com.company.gym.dao.TraineeDAO;
-import com.company.gym.dao.TrainerDAO;
 import com.company.gym.dao.impl.TraineeDAOImpl;
 import com.company.gym.dao.impl.TrainerDAOImpl;
 import com.company.gym.entity.Trainee;
@@ -21,7 +21,7 @@ class TraineeServiceTest {
 
     private TraineeService traineeService;
     private TraineeDAO traineeDAO;
-    private TrainerDAO trainerDAO;
+    private BaseAndUpdateDAO<Trainer> trainerDAO;
     private UserService userService;
     private UsernameGenerator usernameGenerator;
     private PasswordGenerator passwordGenerator;
@@ -129,7 +129,7 @@ class TraineeServiceTest {
         storage1.put(2L, trainee2);
         storage1.put(3L, trainee3);
 
-        traineeService.deleteTrainee(1L);
+        traineeService.delete(1L);
         assertEquals(2, traineeService.getAll().size());
         assertFalse(storage1.containsKey(1L));
     }

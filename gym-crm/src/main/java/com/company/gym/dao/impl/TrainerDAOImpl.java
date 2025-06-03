@@ -1,7 +1,6 @@
 package com.company.gym.dao.impl;
 
-import com.company.gym.dao.TrainerDAO;
-import com.company.gym.entity.Trainee;
+import com.company.gym.dao.BaseAndUpdateDAO;
 import com.company.gym.entity.Trainer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,7 +11,7 @@ import org.springframework.stereotype.Repository;
 import java.util.*;
 
 @Repository
-public class TrainerDAOImpl implements TrainerDAO {
+public class TrainerDAOImpl implements BaseAndUpdateDAO<Trainer> {
     private static final Logger logger = LoggerFactory.getLogger(TrainerDAOImpl.class);
 
     private final Map<Long, Trainer> storage;

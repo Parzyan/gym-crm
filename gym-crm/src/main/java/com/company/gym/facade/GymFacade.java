@@ -44,7 +44,7 @@ public class GymFacade {
     }
 
     public void deleteTrainee(Long id) {
-        traineeService.deleteTrainee(id);
+        traineeService.delete(id);
     }
 
     public Optional<Trainee> getTrainee(Long id) {

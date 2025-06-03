@@ -1,7 +1,7 @@
 package com.company.gym.service;
 
+import com.company.gym.dao.BaseAndUpdateDAO;
 import com.company.gym.dao.TraineeDAO;
-import com.company.gym.dao.TrainerDAO;
 import com.company.gym.dao.impl.TraineeDAOImpl;
 import com.company.gym.dao.impl.TrainerDAOImpl;
 import com.company.gym.entity.Trainee;
@@ -21,7 +21,7 @@ class TrainerServiceTest {
 
     private TrainerService trainerService;
     private TraineeDAO traineeDAO;
-    private TrainerDAO trainerDAO;
+    private BaseAndUpdateDAO<Trainer> trainerDAO;
     private UserService userService;
     private UsernameGenerator usernameGenerator;
     private PasswordGenerator passwordGenerator;
@@ -51,10 +51,10 @@ class TrainerServiceTest {
     void createTrainer() {
         when(passwordGenerator.generatePassword()).thenReturn("1234567890");
 
-        TrainingType specialization = TrainingType.Yoga;
+        TrainingType specialization = TrainingType.YOGA;
         Trainer trainer = trainerService.createTrainer("Mike", "Johnson", specialization);
 
-        assertEquals("Yoga", trainer.getSpecialization().name());
+        assertEquals("YOGA", trainer.getSpecialization().name());
         assertEquals("Mike.Johnson", trainer.getUsername());
         verify(passwordGenerator).generatePassword();
     }
@@ -63,7 +63,7 @@ class TrainerServiceTest {
     void createTrainerDuplicateUsername() {
         when(passwordGenerator.generatePassword()).thenReturn("1234567890");
 
-        TrainingType specialization = TrainingType.Yoga;
+        TrainingType specialization = TrainingType.YOGA;
         trainerService.createTrainer("Mike", "Johnson", specialization);
         Trainer trainerDuplicate = trainerService.createTrainer("Mike", "Johnson", specialization);
 
