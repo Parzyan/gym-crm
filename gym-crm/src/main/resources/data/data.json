@@ -19,10 +19,7 @@
       "username": "Bob.Johnson",
       "password": "password10",
       "isActive": true,
-      "specialization": {
-        "id": 1,
-        "name": "Strength Training"
-      }
+      "specialization": "Strength"
     }
   ],
   "trainings": [
@@ -31,10 +28,7 @@
       "traineeId": 1,
       "trainerId": 1,
       "trainingName": "Beginner Program",
-      "trainingType": {
-        "id": 1,
-        "name": "Strength Training"
-      },
+      "trainingType": "Strength",
       "trainingDate": "2024-06-01",
       "duration": 60
     }
