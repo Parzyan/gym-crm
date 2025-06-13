@@ -5,8 +5,8 @@ import com.company.gym.dao.TraineeDAO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public abstract class AbstractFullCrudService<T> extends AbstractBaseAndUpdateService<T> implements FullCrudService<T> {
-    private static final Logger logger = LoggerFactory.getLogger(AbstractFullCrudService.class);
+public abstract class AbstractCrudService<T> extends AbstractBaseAndUpdateService<T> implements CrudService<T> {
+    private static final Logger logger = LoggerFactory.getLogger(AbstractCrudService.class);
 
     protected TraineeDAO dao;
 
@@ -19,6 +19,6 @@ public abstract class AbstractFullCrudService<T> extends AbstractBaseAndUpdateSe
     @Override
     public void delete(Long id) {
         dao.delete(id);
-        logger.warn("Deleted " + id);
+        logger.debug("Deleted " + id);
     }
 }

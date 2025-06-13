@@ -21,17 +21,9 @@ public class GymFacade {
     private TrainingService trainingService;
 
     @Autowired
-    public void setTraineeService(TraineeService traineeService) {
+    public GymFacade (TraineeService traineeService, TrainerService trainerService, TrainingService trainingService) {
         this.traineeService = traineeService;
-    }
-
-    @Autowired
-    public void setTrainerService(TrainerService trainerService) {
         this.trainerService = trainerService;
-    }
-
-    @Autowired
-    public void setTrainingService(TrainingService trainingService) {
         this.trainingService = trainingService;
     }
 

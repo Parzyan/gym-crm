@@ -13,7 +13,7 @@ import java.time.LocalDate;
 import java.util.Optional;
 
 @Service
-public class TraineeService extends AbstractFullCrudService<Trainee> {
+public class TraineeService extends AbstractCrudService<Trainee> {
     private static final Logger logger = LoggerFactory.getLogger(TraineeService.class);
 
     private UsernameGenerator usernameGenerator;
@@ -65,7 +65,7 @@ public class TraineeService extends AbstractFullCrudService<Trainee> {
             logger.info("Updated trainee with id: {}", id);
             return trainee;
         }
-        logger.info("Trainee with id: {} not found", id);
+        logger.warn("Trainee with id: {} not found", id);
         return null;
     }
 }

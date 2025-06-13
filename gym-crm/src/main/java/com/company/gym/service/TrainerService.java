@@ -64,7 +64,7 @@ public class TrainerService extends AbstractBaseAndUpdateService<Trainer> {
             logger.info("Updated trainer with id: {}", id);
             return trainer;
         }
-        logger.info("Trainer with id: {} not found", id);
+        logger.warn("Trainer with id: {} not found", id);
         return null;
     }
 }

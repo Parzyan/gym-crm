@@ -10,7 +10,7 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 
 @Service
-public class UserService {
+public class UserService implements UsernameExistenceChecker {
     private TraineeDAO traineeDAO;
     private BaseAndUpdateDAO<Trainer> trainerDAO;
 
