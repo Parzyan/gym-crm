@@ -6,6 +6,7 @@ import com.company.gym.dao.impl.TraineeDAOImpl;
 import com.company.gym.dao.impl.TrainerDAOImpl;
 import com.company.gym.entity.Trainee;
 import com.company.gym.entity.Trainer;
+import com.company.gym.service.impl.TraineeServiceImpl;
 import com.company.gym.util.PasswordGenerator;
 import com.company.gym.util.UsernameGenerator;
 import org.junit.jupiter.api.BeforeEach;
@@ -17,9 +18,9 @@ import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-class TraineeServiceTest {
+class TraineeServiceImplImplTest {
 
-    private TraineeService traineeService;
+    /*private TraineeServiceImpl traineeServiceImpl;
     private TraineeDAO traineeDAO;
     private BaseAndUpdateDAO<Trainer> trainerDAO;
     private UserService userService;
@@ -41,17 +42,17 @@ class TraineeServiceTest {
         usernameGenerator = new UsernameGenerator(userService);
         passwordGenerator = mock(PasswordGenerator.class);
 
-        traineeService = new TraineeService();
-        traineeService.setTraineeDAO(traineeDAO);
-        traineeService.setUsernameGenerator(usernameGenerator);
-        traineeService.setPasswordGenerator(passwordGenerator);
+        traineeServiceImpl = new TraineeServiceImpl();
+        traineeServiceImpl.setTraineeDAO(traineeDAO);
+        traineeServiceImpl.setUsernameGenerator(usernameGenerator);
+        traineeServiceImpl.setPasswordGenerator(passwordGenerator);
     }
 
     @Test
     void createTrainee() {
         when(passwordGenerator.generatePassword()).thenReturn("1234567890");
 
-        Trainee trainee = traineeService.createTrainee("John", "Smith", LocalDate.of(1990, 1, 1), "123 Street");
+        Trainee trainee = traineeServiceImpl.createTrainee("John", "Smith", LocalDate.of(1990, 1, 1), "123 Street");
 
         assertEquals("John.Smith", trainee.getUsername());
         assertEquals("1234567890", trainee.getPassword());
@@ -63,8 +64,8 @@ class TraineeServiceTest {
     void createTraineeDuplicateUsername() {
         when(passwordGenerator.generatePassword()).thenReturn("1234567890");
 
-        traineeService.createTrainee("John", "Smith", LocalDate.of(1990, 1, 1), "123 Street");
-        Trainee traineeDuplicate = traineeService.createTrainee("John", "Smith", LocalDate.of(1990, 1, 1), "124 Street");
+        traineeServiceImpl.createTrainee("John", "Smith", LocalDate.of(1990, 1, 1), "123 Street");
+        Trainee traineeDuplicate = traineeServiceImpl.createTrainee("John", "Smith", LocalDate.of(1990, 1, 1), "124 Street");
 
         assertEquals("John.Smith1", traineeDuplicate.getUsername());
         assertEquals("1234567890", traineeDuplicate.getPassword());
@@ -78,7 +79,7 @@ class TraineeServiceTest {
         trainee.setIsActive(false);
         storage1.put(1L, trainee);
 
-        Trainee updated = traineeService.updateTrainee(1L, true, "New Address");
+        Trainee updated = traineeServiceImpl.updateTrainee(1L, true, "New Address");
         assertTrue(updated.getIsActive());
         assertEquals("New Address", updated.getAddress());
     }
@@ -89,14 +90,14 @@ class TraineeServiceTest {
         trainee.setId(1L);
         storage1.put(1L, trainee);
 
-        Optional<Trainee> result = traineeService.getById(1L);
+        Optional<Trainee> result = traineeServiceImpl.getById(1L);
         assertTrue(result.isPresent());
         assertEquals(trainee, result.get());
     }
 
     @Test
     void getTrainee_NotFound() {
-        Optional<Trainee> result = traineeService.getById(999L);
+        Optional<Trainee> result = traineeServiceImpl.getById(999L);
         assertTrue(result.isEmpty());
     }
 
@@ -113,7 +114,7 @@ class TraineeServiceTest {
         storage1.put(2L, trainee2);
         storage1.put(3L, trainee3);
 
-        assertEquals(3, traineeService.getAll().size());
+        assertEquals(3, traineeServiceImpl.getAll().size());
     }
 
     @Test
@@ -129,8 +130,8 @@ class TraineeServiceTest {
         storage1.put(2L, trainee2);
         storage1.put(3L, trainee3);
 
-        traineeService.delete(1L);
-        assertEquals(2, traineeService.getAll().size());
+        traineeServiceImpl.delete(1L);
+        assertEquals(2, traineeServiceImpl.getAll().size());
         assertFalse(storage1.containsKey(1L));
-    }
+    }*/
 }

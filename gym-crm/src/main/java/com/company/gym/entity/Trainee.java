@@ -1,16 +1,55 @@
 package com.company.gym.entity;
 
-import java.time.LocalDate;
+import jakarta.persistence.*;
+import java.util.Date;
 
-public class Trainee extends User{
-    private LocalDate dateOfBirth;
+@Entity
+@Table(name = "trainees")
+public class Trainee {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "date_of_birth")
+    private Date dateOfBirth;
+
+    @Column(name = "address")
     private String address;
 
-    public LocalDate getDateOfBirth() {
+    @OneToOne(cascade = CascadeType.ALL)
+    @JoinColumn(name = "user_id", referencedColumnName = "id", nullable = false)
+    private User user;
+
+    public Trainee() {
+    }
+
+    public Trainee(Date dateOfBirth, String address, User user) {
+        this.dateOfBirth = dateOfBirth;
+        this.address = address;
+        this.user = user;
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
+    }
+
+    public Date getDateOfBirth() {
         return dateOfBirth;
     }
 
-    public void setDateOfBirth(LocalDate dateOfBirth) {
+    public void setDateOfBirth(Date dateOfBirth) {
         this.dateOfBirth = dateOfBirth;
     }
 
@@ -25,14 +64,10 @@ public class Trainee extends User{
     @Override
     public String toString() {
         return "Trainee{" +
-                "id=" + getId() +
-                ", firstName='" + getFirstName() + '\'' +
-                ", lastName='" + getLastName() + '\'' +
-                ", username='" + getUsername() + '\'' +
-                ", password='" + getPassword() + '\'' +
-                ", isActive='" + getIsActive() + '\'' +
+                "id=" + id +
                 ", dateOfBirth=" + dateOfBirth +
                 ", address='" + address + '\'' +
+                ", user=" + user +
                 '}';
     }
 }

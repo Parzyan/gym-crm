@@ -19,6 +19,6 @@ public abstract class AbstractCrudService<T> extends AbstractBaseAndUpdateServic
     @Override
     public void delete(Long id) {
         dao.delete(id);
-        logger.debug("Deleted " + id);
+        logger.debug("Deleted entity with ID: {}", id);
     }
 }
