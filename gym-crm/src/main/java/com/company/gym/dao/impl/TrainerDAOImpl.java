@@ -1,6 +1,5 @@
 package com.company.gym.dao.impl;
 
-import com.company.gym.dao.BaseAndUpdateDAO;
 import com.company.gym.dao.TrainerDAO;
 import com.company.gym.entity.Trainer;
 import jakarta.persistence.EntityManager;
@@ -9,8 +8,6 @@ import jakarta.persistence.TypedQuery;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Repository;
 
 import java.util.*;

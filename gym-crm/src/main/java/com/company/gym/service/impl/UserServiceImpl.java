@@ -14,12 +14,16 @@ import org.springframework.stereotype.Service;
 public class UserServiceImpl implements UserService {
     private static final Logger logger = LoggerFactory.getLogger(UserServiceImpl.class);
 
-    private final TraineeDAO traineeDAO;
-    private final TrainerDAO trainerDAO;
+    private TraineeDAO traineeDAO;
+    private TrainerDAO trainerDAO;
 
     @Autowired
-    public UserServiceImpl(TraineeDAO traineeDAO, TrainerDAO trainerDAO) {
+    public void setTraineeDAO(TraineeDAO traineeDAO) {
         this.traineeDAO = traineeDAO;
+    }
+
+    @Autowired
+    public void setTrainerDAO(TrainerDAO trainerDAO) {
         this.trainerDAO = trainerDAO;
     }
 

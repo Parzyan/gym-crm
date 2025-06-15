@@ -30,6 +30,7 @@ public class TrainerServiceImpl extends AbstractBaseAndUpdateService<Trainer> im
     private TrainingTypeDAO trainingTypeDAO;
     private UsernameGenerator usernameGenerator;
     private PasswordGenerator passwordGenerator;
+    private AuthenticationServiceImpl authenticationServiceImpl;
 
     @Autowired
     public void setTrainerDAO(TrainerDAO trainerDAO) {
@@ -57,14 +58,21 @@ public class TrainerServiceImpl extends AbstractBaseAndUpdateService<Trainer> im
         this.passwordGenerator = passwordGenerator;
     }
 
+    @Autowired
+    public void setAuthenticationService(AuthenticationServiceImpl authenticationServiceImpl) {
+        this.authenticationServiceImpl = authenticationServiceImpl;
+    }
+
     @Override
     public Trainer createTrainerProfile(String firstName, String lastName, Long specializationId) {
         Optional<TrainingType> trainingTypeOpt = trainingTypeDAO.findById(specializationId);
+        if(firstName == null || lastName == null) {
+            throw new IllegalArgumentException("FirstName and LastName must not be null");
+        }
         if (trainingTypeOpt.isEmpty()) {
             logger.warn("Training type not found for ID: {}", specializationId);
             throw new IllegalArgumentException("Invalid training type");
         }
-
         String username = usernameGenerator.generateUsername(firstName, lastName);
         String password = passwordGenerator.generatePassword();
 
@@ -82,14 +90,6 @@ public class TrainerServiceImpl extends AbstractBaseAndUpdateService<Trainer> im
         trainerDAO.save(trainer);
         logger.info("Created trainer profile with username: {}", username);
         return trainer;
-    }
-
-    @Override
-    public boolean authenticateTrainer(String username, String password) {
-        Optional<Trainer> trainerOpt = trainerDAO.findByUsername(username);
-        return trainerOpt.isPresent() &&
-                trainerOpt.get().getUser().getPassword().equals(password) &&
-                trainerOpt.get().getUser().getIsActive();
     }
 
     @Override
@@ -112,42 +112,54 @@ public class TrainerServiceImpl extends AbstractBaseAndUpdateService<Trainer> im
     }
 
     @Override
-    public Trainer updateTrainerProfile(String username, Long specializationId) {
-        Optional<Trainer> trainerOpt = trainerDAO.findByUsername(username);
-        if (trainerOpt.isEmpty()) {
-            logger.warn("Trainer not found for update: {}", username);
-            throw new IllegalArgumentException("Trainer not found");
+    public Trainer updateTrainerProfile(String requesterPassword, String username, Long specializationId) {
+        if(authenticationServiceImpl.authenticateUser(username, requesterPassword)) {
+            Optional<Trainer> trainerOpt = trainerDAO.findByUsername(username);
+            if (trainerOpt.isEmpty()) {
+                logger.warn("Trainer not found for update: {}", username);
+            }
+
+            Optional<TrainingType> trainingTypeOpt = trainingTypeDAO.findById(specializationId);
+            if (trainingTypeOpt.isEmpty()) {
+                logger.warn("Training type not found for ID: {}", specializationId);
+            }
+
+            Trainer trainer = trainerOpt.orElseThrow(() -> new IllegalArgumentException("Trainer not found"));
+            TrainingType trainingType = trainingTypeOpt.orElseThrow(() -> new IllegalArgumentException("Training type not found"));
+
+            trainer.setSpecialization(trainingType);
+            trainerDAO.update(trainer);
+
+            logger.info("Updated trainer profile: {}", username);
+            return trainer;
         }
-
-        Optional<TrainingType> trainingTypeOpt = trainingTypeDAO.findById(specializationId);
-        if (trainingTypeOpt.isEmpty()) {
-            logger.warn("Training type not found for ID: {}", specializationId);
-            throw new IllegalArgumentException("Invalid training type");
+        else {
+            logger.warn("Authentication failed - username or password incorrect");
+            return null;
         }
-
-        Trainer trainer = trainerOpt.get();
-        trainer.setSpecialization(trainingTypeOpt.get());
-        trainerDAO.update(trainer);
-
-        logger.info("Updated trainer profile: {}", username);
-        return trainer;
     }
 
     @Override
-    public void updateTrainerStatus(String username, boolean isActive) {
-        Optional<Trainer> trainerOpt = trainerDAO.findByUsername(username);
-        if (trainerOpt.isPresent()) {
-            Trainer trainer = trainerOpt.get();
-            if (trainer.getUser().getIsActive() != isActive) {
-                trainer.getUser().setIsActive(isActive);
-                trainerDAO.update(trainer);
-                logger.info("Updated trainer {} status to: {}", username, isActive);
+    public void updateTrainerStatus(String requesterPassword, String username) {
+        if(authenticationServiceImpl.authenticateUser(username, requesterPassword)) {
+            Optional<Trainer> trainerOpt = trainerDAO.findByUsername(username);
+            if (trainerOpt.isPresent()) {
+                Trainer trainer = trainerOpt.get();
+                if (trainer.getUser().getIsActive()) {
+                    trainer.getUser().setIsActive(false);
+                    trainerDAO.update(trainer);
+                    logger.info("Updated trainer {} status to: {}", username, false);
+                } else {
+                    trainer.getUser().setIsActive(true);
+                    trainerDAO.update(trainer);
+                    logger.info("Trainer {} status already set to: {}", username, true);
+                }
             } else {
-                logger.info("Trainer {} status already set to: {}", username, isActive);
+                logger.warn("Trainer not found for status update: {}", username);
             }
-        } else {
-            logger.warn("Trainer not found for status update: {}", username);
-            throw new IllegalArgumentException("Trainer not found");
+        }
+        else {
+            logger.warn("Authentication failed - username or password incorrect");
         }
     }
 

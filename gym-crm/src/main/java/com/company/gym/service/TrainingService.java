@@ -6,10 +6,10 @@ import java.util.Date;
 import java.util.List;
 
 public interface TrainingService {
-    Training createTraining(String traineeUsername, String trainerUsername, String trainingName,
+    Training createTraining(String traineeUsername, String traineePassword, String trainerUsername, String trainerPassword, String trainingName,
                             Long trainingTypeId, Date trainingDate, Integer duration);
-    List<Training> getTraineeTrainings(String username, Date fromDate, Date toDate,
+    List<Training> getTraineeTrainings(String requesterPassword, String username, Date fromDate, Date toDate,
                                        String trainerName, Long trainingTypeId);
-    List<Training> getTrainerTrainings(String username, Date fromDate,
+    List<Training> getTrainerTrainings(String requesterPassword, String username, Date fromDate,
                                        Date toDate, String traineeName);
 }

@@ -8,7 +8,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class PasswordGeneratorTest {
 
-    /*private PasswordGenerator passwordGenerator;
+    private PasswordGenerator passwordGenerator;
     private static final String CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 
     @BeforeEach
@@ -56,5 +56,5 @@ class PasswordGeneratorTest {
         assertTrue(hasUpper, "Password should contain uppercase letters");
         assertTrue(hasLower, "Password should contain lowercase letters");
         assertTrue(hasDigit, "Password should contain digits");
-    }*/
+    }
 }

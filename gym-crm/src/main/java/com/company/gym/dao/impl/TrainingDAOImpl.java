@@ -20,6 +20,10 @@ public class TrainingDAOImpl implements TrainingDAO {
     @PersistenceContext
     private EntityManager entityManager;
 
+    void setEntityManager(EntityManager entityManager) {
+        this.entityManager = entityManager;
+    }
+
     @Override
     public void save(Training training) {
         try {

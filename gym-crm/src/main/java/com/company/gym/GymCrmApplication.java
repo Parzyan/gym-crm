@@ -2,7 +2,6 @@ package com.company.gym;
 
 import com.company.gym.entity.Trainee;
 import com.company.gym.entity.Trainer;
-import com.company.gym.entity.TrainingType;
 import com.company.gym.facade.GymFacade;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,7 +11,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 
-import java.time.LocalDate;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.Optional;
 
@@ -32,34 +31,34 @@ public class GymCrmApplication implements CommandLineRunner {
 	@Override
 	public void run(String... args) {
 		gymFacade.createTrainee("Bob", "Johnson", new Date(90, 0, 1), "123 Street");
+		gymFacade.createTrainee("Bob", "Johnson", new Date(91, 0, 1), "123 Street");
+		gymFacade.createTrainee("Bob", "Johnson", new Date(92, 0, 1), "123 Street");
 		gymFacade.createTrainee("Mike", "Johnson", new Date(95, 0, 1), "124 Street");
 
-		/*TrainingType specialization = TrainingType.YOGA;
-		gymFacade.createTrainer("Mike", "Johnson", specialization);
+		gymFacade.createTrainer("Mike", "Johnson", 1L);
 
 		Optional<Trainee> a = gymFacade.getTrainee(2L);
 		Optional<Trainer> b = gymFacade.getTrainer(2L);
 
 		if (a.isPresent()) {
-			logger.info("Trainee with the id of 2: {}", a.get().getUsername());
+			logger.info("Trainee with the id of 2: {}", a.get().getUser().getUsername());
 		} else {
 			logger.warn("Trainee with the id of 2 not found");
 		}
 
 		if (b.isPresent()) {
-			logger.info("Trainer with the id of 2: {}", b.get().getUsername());
+			logger.info("Trainer with the id of 2: {}", b.get().getUser().getUsername());
 		} else {
 			logger.warn("Trainer with the id of 2 not found");
 		}
 
-		gymFacade.createTraining(2L, 2L, "Introduction", specialization, LocalDate.now(), 25);
+		gymFacade.updateTraineeStatus("password12", "Bob.Johnson2");
 
-		gymFacade.updateTrainee(1L, false, "123 Street");
+		gymFacade.createTraining("Bob.Johnson1", "password12", "Mike.Johnson1", "password12",
+				"Introduction", 2L, new Date(), 20);
 
-		gymFacade.deleteTrainee(2L);
+		gymFacade.deleteTrainee("password12", "Bob.Johnson1");
 
-		logger.info("All trainees: {}", gymFacade.getAllTrainees().toString());
-		logger.info("All trainers: {}", gymFacade.getAllTrainers().toString());
-		logger.info("All trainings: {}", gymFacade.getAllTrainings().toString());*/
+		logger.info("All Active trainees: {}", Arrays.toString(gymFacade.getActiveTrainees().toArray()));
 	}
 }

@@ -7,33 +7,28 @@ import com.company.gym.dao.impl.TrainerDAOImpl;
 import com.company.gym.entity.Trainee;
 import com.company.gym.entity.Trainer;
 import com.company.gym.service.UserService;
+import com.company.gym.service.impl.UserServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class UsernameGeneratorTest {
 
-    /*private UsernameGenerator usernameGenerator;
-    private UserService userService;
-    private TraineeDAO traineeDAO;
-    private BaseAndUpdateDAO<Trainer> trainerDAO;
-    private Map<Long, Trainee> traineeStorage;
-    private Map<Long, Trainer> trainerStorage;
+    private UsernameGenerator usernameGenerator;
+    private InMemoryUsernameAvailabilityChecker availabilityChecker;
+    private Set<String> existingUsernames;
 
     @BeforeEach
     void setUp() {
-        traineeStorage = new HashMap<>();
-        trainerStorage = new HashMap<>();
-        traineeDAO = new TraineeDAOImpl(traineeStorage);
-        trainerDAO = new TrainerDAOImpl(trainerStorage);
-        userService = new UserService();
-        userService.setTraineeDAO(traineeDAO);
-        userService.setTrainerDAO(trainerDAO);
-        usernameGenerator = new UsernameGenerator(userService);
+        existingUsernames = new HashSet<>();
+        availabilityChecker = new InMemoryUsernameAvailabilityChecker(existingUsernames);
+        usernameGenerator = new UsernameGenerator(availabilityChecker);
     }
 
     @Test
@@ -44,9 +39,7 @@ class UsernameGeneratorTest {
 
     @Test
     void generateUsername_WithDuplicate() {
-        Trainee existing = new Trainee();
-        existing.setUsername("John.Smith");
-        traineeStorage.put(1L, existing);
+        existingUsernames.add("John.Smith");
 
         String username = usernameGenerator.generateUsername("John", "Smith");
         assertEquals("John.Smith1", username);
@@ -54,17 +47,9 @@ class UsernameGeneratorTest {
 
     @Test
     void generateUsername_WithMultipleDuplicates() {
-        Trainee existing1 = new Trainee();
-        existing1.setUsername("John.Smith");
-        traineeStorage.put(1L, existing1);
-
-        Trainee existing2 = new Trainee();
-        existing2.setUsername("John.Smith1");
-        traineeStorage.put(2L, existing2);
-
-        Trainee existing3 = new Trainee();
-        existing3.setUsername("John.Smith2");
-        traineeStorage.put(3L, existing3);
+        existingUsernames.add("John.Smith");
+        existingUsernames.add("John.Smith1");
+        existingUsernames.add("John.Smith2");
 
         String username = usernameGenerator.generateUsername("John", "Smith");
         assertEquals("John.Smith3", username);
@@ -74,5 +59,19 @@ class UsernameGeneratorTest {
     void generateUsername_WithEmptyNames() {
         String username = usernameGenerator.generateUsername("", "");
         assertEquals(".", username);
-    }*/
+    }
+
+    private static class InMemoryUsernameAvailabilityChecker implements UsernameAvailabilityChecker {
+
+        private final Set<String> existingUsernames;
+
+        public InMemoryUsernameAvailabilityChecker(Set<String> existingUsernames) {
+            this.existingUsernames = existingUsernames;
+        }
+
+        @Override
+        public boolean isUsernameTaken(String username) {
+            return existingUsernames.contains(username);
+        }
+    }
 }
