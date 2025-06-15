@@ -3,6 +3,8 @@ package com.company.gym.service;
 import com.company.gym.dao.BaseAndUpdateDAO;
 import com.company.gym.dao.BaseDAO;
 
+import java.util.Optional;
+
 public abstract class AbstractBaseAndUpdateService <T> extends AbstractBaseService <T> implements BaseAndUpdateService <T> {
     protected BaseAndUpdateDAO<T> dao;
 
@@ -16,5 +18,10 @@ public abstract class AbstractBaseAndUpdateService <T> extends AbstractBaseServi
     public T update(T entity) {
         dao.update(entity);
         return entity;
+    }
+
+    @Override
+    public Optional<T> getByUsername(String username) {
+        return dao.findByUsername(username);
     }
 }

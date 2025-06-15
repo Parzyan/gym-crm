@@ -28,4 +28,3 @@ public abstract class AbstractBaseService<T> implements BaseService<T> {
         return dao.findAll();
     }
 }
-
