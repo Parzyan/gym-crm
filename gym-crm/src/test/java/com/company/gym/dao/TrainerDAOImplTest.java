@@ -1,48 +1,50 @@
 package com.company.gym.dao;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+import java.util.*;
+
 import com.company.gym.dao.impl.TrainerDAOImpl;
-import com.company.gym.entity.Trainee;
 import com.company.gym.entity.Trainer;
 import com.company.gym.entity.TrainingType;
 import com.company.gym.entity.User;
+import com.company.gym.exception.DAOException;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.TypedQuery;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.test.util.ReflectionTestUtils;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.slf4j.Logger;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-
-import static org.hamcrest.Matchers.any;
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
-
+@ExtendWith(MockitoExtension.class)
 class TrainerDAOImplTest {
 
+    @Mock
     private EntityManager entityManager;
+
+    @Mock
+    private TypedQuery<Trainer> query;
+
+    @InjectMocks
     private TrainerDAOImpl trainerDAO;
 
     private Trainer testTrainer;
-    private User testUser;
-    private TrainingType testTrainingType;
 
     @BeforeEach
     void setUp() {
-        entityManager = mock(EntityManager.class);
-        trainerDAO = new TrainerDAOImpl();
-        ReflectionTestUtils.setField(trainerDAO, "entityManager", entityManager);
-
-        testUser = new User();
+        User testUser = new User();
         testUser.setId(1L);
         testUser.setUsername("test.trainer");
         testUser.setPassword("password");
         testUser.setIsActive(true);
 
-        testTrainingType = new TrainingType();
+        TrainingType testTrainingType = new TrainingType();
         testTrainingType.setId(1L);
-        testTrainingType.setTrainingTypeName("Yoga");
+        testTrainingType.setTrainingTypeName("Fitness");
 
         testTrainer = new Trainer();
         testTrainer.setId(1L);
@@ -51,103 +53,96 @@ class TrainerDAOImplTest {
     }
 
     @Test
-    void save_Success() {
-        doNothing().when(entityManager).persist(any(Trainer.class));
+    void findByUsername_TrainerExists() {
+        when(entityManager.createQuery(anyString(), eq(Trainer.class))).thenReturn(query);
+        when(query.getResultList()).thenReturn(Collections.singletonList(testTrainer));
 
+        Optional<Trainer> result = trainerDAO.findByUsername("test.trainer");
+
+        assertTrue(result.isPresent());
+        assertEquals("test.trainer", result.get().getUser().getUsername());
+        verify(query).setParameter("username", "test.trainer");
+    }
+
+    @Test
+    void findByUsername_TrainerNotExists() {
+        when(entityManager.createQuery(anyString(), eq(Trainer.class))).thenReturn(query);
+        when(query.getResultList()).thenReturn(Collections.emptyList());
+
+        Optional<Trainer> result = trainerDAO.findByUsername("unknown.trainer");
+
+        assertFalse(result.isPresent());
+    }
+
+    @Test
+    void findByUsername_ExceptionHandling() {
+        when(entityManager.createQuery(anyString(), eq(Trainer.class)))
+                .thenThrow(new RuntimeException("DB error"));
+
+        Optional<Trainer> result = trainerDAO.findByUsername("test.trainer");
+
+        assertFalse(result.isPresent());
+    }
+
+    @Test
+    void save_Success() {
         trainerDAO.save(testTrainer);
 
         verify(entityManager).persist(testTrainer);
     }
 
     @Test
-    void findById_Success() {
-        when(entityManager.find(Trainer.class, 1L)).thenReturn(testTrainer);
+    void save_ExceptionHandling() {
+        doThrow(new RuntimeException("DB error")).when(entityManager).persist(any(Trainer.class));
 
-        Optional<Trainer> result = trainerDAO.findById(1L);
-
-        assertTrue(result.isPresent());
-        assertEquals(testTrainer, result.get());
-    }
-
-    @Test
-    void findAll_Success() {
-        TypedQuery<Trainer> query = mock(TypedQuery.class);
-        when(entityManager.createQuery(anyString(), eq(Trainer.class))).thenReturn(query);
-        when(query.getResultList()).thenReturn(Collections.singletonList(testTrainer));
-
-        List<Trainer> result = trainerDAO.findAll();
-
-        assertEquals(1, result.size());
-        assertEquals(testTrainer, result.getFirst());
+        assertThrows(DAOException.class, () -> trainerDAO.save(testTrainer));
     }
 
     @Test
     void update_Success() {
-        when(entityManager.merge(testTrainer)).thenReturn(testTrainer);
-
         trainerDAO.update(testTrainer);
 
         verify(entityManager).merge(testTrainer);
     }
 
     @Test
-    void findByUsername_Success() {
-        TypedQuery<Trainer> query = mock(TypedQuery.class);
-        when(entityManager.createQuery(anyString(), eq(Trainer.class))).thenReturn(query);
-        when(query.setParameter(anyString(), anyLong())).thenReturn(query);
-        when(query.getResultList()).thenReturn(Collections.singletonList(testTrainer));
+    void update_ExceptionHandling() {
+        doThrow(new RuntimeException("DB error")).when(entityManager).merge(any(Trainer.class));
 
-        Optional<Trainer> result = trainerDAO.findByUsername("test.trainer");
-
-        assertTrue(result.isPresent());
-        assertEquals(testTrainer, result.get());
+        assertThrows(DAOException.class, () -> trainerDAO.update(testTrainer));
     }
 
     @Test
     void findBySpecialization_Success() {
-        TypedQuery<Trainer> query = mock(TypedQuery.class);
+        List<Trainer> expected = Collections.singletonList(testTrainer);
         when(entityManager.createQuery(anyString(), eq(Trainer.class))).thenReturn(query);
-        when(query.setParameter(anyString(), anyLong())).thenReturn(query);
-        when(query.getResultList()).thenReturn(Collections.singletonList(testTrainer));
+        when(query.getResultList()).thenReturn(expected);
 
         List<Trainer> result = trainerDAO.findBySpecialization(1L);
 
         assertEquals(1, result.size());
         assertEquals(testTrainer, result.getFirst());
+        verify(query).setParameter("trainingTypeId", 1L);
     }
 
     @Test
-    void changePassword_Success() {
-        when(entityManager.find(Trainer.class, 1L)).thenReturn(testTrainer);
-        when(entityManager.merge(testTrainer)).thenReturn(testTrainer);
+    void findBySpecialization_ExceptionHandling() {
+        when(entityManager.createQuery(anyString(), eq(Trainer.class)))
+                .thenThrow(new RuntimeException("DB error"));
 
-        trainerDAO.changePassword(1L, "newPassword");
-
-        assertEquals("newPassword", testTrainer.getUser().getPassword());
-        verify(entityManager).merge(testTrainer);
-    }
-
-    @Test
-    void updateActivity_Success() {
-        when(entityManager.find(Trainer.class, 1L)).thenReturn(testTrainer);
-        when(entityManager.merge(testTrainer)).thenReturn(testTrainer);
-
-        trainerDAO.updateActivity(1L, false);
-
-        assertFalse(testTrainer.getUser().getIsActive());
-        verify(entityManager).merge(testTrainer);
+        assertThrows(DAOException.class, () -> trainerDAO.findBySpecialization(1L));
     }
 
     @Test
     void findTrainersNotAssignedToTrainee_Success() {
-        TypedQuery<Trainer> query = mock(TypedQuery.class);
+        List<Trainer> expected = Collections.singletonList(testTrainer);
         when(entityManager.createQuery(anyString(), eq(Trainer.class))).thenReturn(query);
-        when(query.setParameter(anyString(), anyLong())).thenReturn(query);
-        when(query.getResultList()).thenReturn(Collections.singletonList(testTrainer));
+        when(query.getResultList()).thenReturn(expected);
 
         List<Trainer> result = trainerDAO.findTrainersNotAssignedToTrainee(1L);
 
         assertEquals(1, result.size());
-        assertEquals(testTrainer, result.get(0));
+        assertEquals(testTrainer, result.getFirst());
+        verify(query).setParameter("traineeId", 1L);
     }
 }

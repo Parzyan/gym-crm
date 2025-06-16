@@ -1,10 +1,7 @@
 package com.company.gym.service.impl;
 
 import com.company.gym.dao.*;
-import com.company.gym.entity.Trainee;
-import com.company.gym.entity.Trainer;
-import com.company.gym.entity.Training;
-import com.company.gym.entity.TrainingType;
+import com.company.gym.entity.*;
 import com.company.gym.service.AbstractBaseService;
 import com.company.gym.service.TrainingService;
 import jakarta.transaction.Transactional;
@@ -15,7 +12,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.Date;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 @Transactional
@@ -26,7 +22,6 @@ public class TrainingServiceImpl extends AbstractBaseService<Training> implement
     private TraineeDAO traineeDAO;
     private TrainerDAO trainerDAO;
     private TrainingTypeDAO trainingTypeDAO;
-    private AuthenticationServiceImpl authenticationServiceImpl;
 
     @Autowired
     public void setTrainingDAO(TrainingDAO trainingDAO) {
@@ -49,83 +44,57 @@ public class TrainingServiceImpl extends AbstractBaseService<Training> implement
         this.trainingTypeDAO = trainingTypeDAO;
     }
 
-    @Autowired
-    public void setAuthenticationService(AuthenticationServiceImpl authenticationServiceImpl) {
-        this.authenticationServiceImpl = authenticationServiceImpl;
-    }
-
     @Override
-    public Training createTraining(String traineeUsername, String traineePassword, String trainerUsername, String trainerPassword, String trainingName,
+    public Training createTraining(Credentials traineeCreds, Credentials trainerCreds, String trainingName,
                                    Long trainingTypeId, Date trainingDate, Integer duration) {
-        if(authenticationServiceImpl.authenticateUser(traineeUsername, traineePassword) && authenticationServiceImpl.authenticateUser(trainerUsername, trainerPassword)) {
-            if (duration <= 0) {
-                throw new IllegalArgumentException("Duration must be positive");
-            }
+        validateCredentials(traineeCreds);
+        validateCredentials(trainerCreds);
 
-            Optional<Trainee> traineeOpt = traineeDAO.findByUsername(traineeUsername);
-            if (traineeOpt.isEmpty()) {
-                throw new IllegalArgumentException("Trainee not found");
-            }
-
-            Optional<Trainer> trainerOpt = trainerDAO.findByUsername(trainerUsername);
-            if (trainerOpt.isEmpty()) {
-                throw new IllegalArgumentException("Trainer not found");
-            }
-
-            Optional<TrainingType> trainingTypeOpt = trainingTypeDAO.findById(trainingTypeId);
-            if (trainingTypeOpt.isEmpty()) {
-                throw new IllegalArgumentException("Training type not found");
-            }
-
-            Training training = new Training();
-            training.setTrainee(traineeOpt.get());
-            training.setTrainer(trainerOpt.get());
-            training.setTrainingName(trainingName);
-            training.setTrainingType(trainingTypeOpt.get());
-            training.setTrainingDate(trainingDate);
-            training.setDuration(duration);
-
-            trainingDAO.save(training);
-            logger.info("Created training with ID: {}", training.getId());
-            return training;
+        if (duration <= 0) {
+            throw new IllegalArgumentException("Duration must be positive");
         }
-        else {
-            logger.error("Authentication failed");
-            return null;
-        }
+
+        Trainee trainee = traineeDAO.findByUsername(traineeCreds.getUsername())
+                .orElseThrow(() -> new IllegalArgumentException("Trainee not found"));
+        Trainer trainer = trainerDAO.findByUsername(trainerCreds.getUsername())
+                .orElseThrow(() -> new IllegalArgumentException("Trainer not found"));
+        TrainingType trainingType = trainingTypeDAO.findById(trainingTypeId)
+                .orElseThrow(() -> new IllegalArgumentException("Training type not found"));
+
+        Training training = new Training();
+        training.setTrainee(trainee);
+        training.setTrainer(trainer);
+        training.setTrainingName(trainingName);
+        training.setTrainingType(trainingType);
+        training.setTrainingDate(trainingDate);
+        training.setDuration(duration);
+
+        trainingDAO.save(training);
+        logger.info("Created training with ID: {}", training.getId());
+        return training;
     }
 
     @Override
-    public List<Training> getTraineeTrainings(String requesterPassword, String username, Date fromDate, Date toDate,
+    public List<Training> getTraineeTrainings(Credentials credentials, Date fromDate, Date toDate,
                                               String trainerName, Long trainingTypeId) {
-        if(authenticationServiceImpl.authenticateUser(username, requesterPassword)) {
-            Optional<Trainee> traineeOpt = traineeDAO.findByUsername(username);
-            if (traineeOpt.isEmpty()) {
-                throw new IllegalArgumentException("Trainee not found");
-            }
-            return trainingDAO.findTrainingsByTraineeAndCriteria(
-                    traineeOpt.get().getId(), fromDate, toDate, trainerName, trainingTypeId);
-        }
-        else {
-            logger.error("Authentication failed");
-            return null;
-        }
+        validateCredentials(credentials);
+
+        Trainee trainee = traineeDAO.findByUsername(credentials.getUsername())
+                .orElseThrow(() -> new IllegalArgumentException("Trainee not found"));
+
+        return trainingDAO.findTrainingsByTraineeAndCriteria(
+                trainee.getId(), fromDate, toDate, trainerName, trainingTypeId);
     }
 
     @Override
-    public List<Training> getTrainerTrainings(String requesterPassword, String username, Date fromDate,
-                                              Date toDate, String traineeName) {
-        if(authenticationServiceImpl.authenticateUser(username, requesterPassword)) {
-            Optional<Trainer> trainerOpt = trainerDAO.findByUsername(username);
-            if (trainerOpt.isEmpty()) {
-                throw new IllegalArgumentException("Trainer not found");
-            }
-            return trainingDAO.findTrainingsByTrainerAndCriteria(
-                    trainerOpt.get().getId(), fromDate, toDate, traineeName);
-        }
-        else {
-            logger.error("Authentication failed");
-            return null;
-        }
+    public List<Training> getTrainerTrainings(Credentials credentials, Date fromDate, Date toDate,
+                                              String traineeName) {
+        validateCredentials(credentials);
+
+        Trainer trainer = trainerDAO.findByUsername(credentials.getUsername())
+                .orElseThrow(() -> new IllegalArgumentException("Trainer not found"));
+
+        return trainingDAO.findTrainingsByTrainerAndCriteria(
+                trainer.getId(), fromDate, toDate, traineeName);
     }
 }

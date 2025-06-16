@@ -1,5 +1,6 @@
 package com.company.gym.facade;
 
+import com.company.gym.entity.Credentials;
 import com.company.gym.entity.Trainee;
 import com.company.gym.entity.Trainer;
 import com.company.gym.entity.Training;
@@ -31,28 +32,24 @@ public class GymFacade {
         return traineeServiceImpl.createTraineeProfile(firstName, lastName, dateOfBirth, address);
     }
 
-    public void updateTrainee(String requesterPassword, String username, Date dateOfBirth, String address) {
-        traineeServiceImpl.updateTraineeProfile(requesterPassword, username, dateOfBirth, address);
+    public void updateTrainee(Credentials credentials, Date dateOfBirth, String address) {
+        traineeServiceImpl.updateTraineeProfile(credentials, dateOfBirth, address);
     }
 
-    public void deleteTrainee(String requesterPassword, String username) {
-        traineeServiceImpl.deleteTraineeProfile(requesterPassword, username);
+    public void deleteTrainee(Credentials credentials) {
+        traineeServiceImpl.deleteTraineeProfile(credentials);
     }
 
     public void changeTraineePassword(String username, String oldPassword, String newPassword) {
-        traineeServiceImpl.changeTraineePassword(username, oldPassword, newPassword);
+        traineeServiceImpl.changePassword(username, oldPassword, newPassword);
     }
 
-    public void updateTraineeStatus(String requesterPassword, String username) {
-        traineeServiceImpl.updateTraineeStatus(requesterPassword, username);
+    public void updateTraineeStatus(Credentials credentials) {
+        traineeServiceImpl.updateStatus(credentials);
     }
 
-    public List<Trainee> getActiveTrainees() {
-        return traineeServiceImpl.getActiveTrainees();
-    }
-
-    public void updateTraineeTrainers(String requesterPassword, String traineeUsername, Set<Long> trainerIds) {
-        traineeServiceImpl.updateTraineeTrainers(requesterPassword, traineeUsername, trainerIds);
+    public void updateTraineeTrainers(Credentials credentials, Set<Long> trainerIds) {
+        traineeServiceImpl.updateTraineeTrainers(credentials, trainerIds);
     }
 
     public Optional<Trainee> getTrainee(Long id) {
@@ -68,15 +65,15 @@ public class GymFacade {
     }
 
     public void changeTrainerPassword(String username, String oldPassword, String newPassword) {
-        trainerServiceImpl.changeTrainerPassword(username, oldPassword, newPassword);
+        trainerServiceImpl.changePassword(username, oldPassword, newPassword);
     }
 
-    public Trainer updateTrainer(String requesterPassword, String username, Long specializationId) {
-        return trainerServiceImpl.updateTrainerProfile(requesterPassword, username, specializationId);
+    public Trainer updateTrainer(Credentials credentials, Long specializationId) {
+        return trainerServiceImpl.updateTrainerProfile(credentials, specializationId);
     }
 
-    public void updateTrainerStatus(String requesterPassword, String username) {
-        trainerServiceImpl.updateTrainerStatus(requesterPassword, username);
+    public void updateTrainerStatus(Credentials credentials) {
+        trainerServiceImpl.updateStatus(credentials);
     }
 
     public List<Trainer> getTrainersBySpecialization(Long trainingTypeId) {
@@ -95,20 +92,20 @@ public class GymFacade {
         return trainerServiceImpl.getAll();
     }
 
-    public Training createTraining(String traineeUsername, String traineePassword, String trainerUsername, String trainerPassword, String trainingName,
+    public Training createTraining(Credentials traineeCreds, Credentials trainerCreds, String trainingName,
                                    Long trainingTypeId, Date trainingDate, Integer duration) {
-        return trainingServiceImpl.createTraining(traineeUsername, traineePassword, trainerUsername, trainerPassword, trainingName,
+        return trainingServiceImpl.createTraining(traineeCreds, trainerCreds, trainingName,
                 trainingTypeId, trainingDate, duration);
     }
 
-    public List<Training> getTraineeTrainings(String requesterPassword, String username, Date fromDate, Date toDate,
+    public List<Training> getTraineeTrainings(Credentials credentials, Date fromDate, Date toDate,
                                               String trainerName, Long trainingTypeId) {
-        return trainingServiceImpl.getTraineeTrainings(requesterPassword, username, fromDate, toDate, trainerName, trainingTypeId);
+        return trainingServiceImpl.getTraineeTrainings(credentials, fromDate, toDate, trainerName, trainingTypeId);
     }
 
-    public List<Training> getTrainerTrainings(String requesterPassword, String username, Date fromDate,
+    public List<Training> getTrainerTrainings(Credentials credentials, Date fromDate,
                                               Date toDate, String traineeName) {
-        return trainingServiceImpl.getTrainerTrainings(requesterPassword, username, fromDate, toDate, traineeName);
+        return trainingServiceImpl.getTrainerTrainings(credentials, fromDate, toDate, traineeName);
     }
 
     public Optional<Training> getTraining(Long id) { return trainingServiceImpl.getById(id); }

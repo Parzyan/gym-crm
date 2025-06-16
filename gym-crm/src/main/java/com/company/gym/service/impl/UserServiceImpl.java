@@ -1,7 +1,6 @@
 package com.company.gym.service.impl;
 
-import com.company.gym.dao.TraineeDAO;
-import com.company.gym.dao.TrainerDAO;
+import com.company.gym.dao.impl.UserDAOImpl;
 import com.company.gym.service.UserService;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
@@ -14,26 +13,18 @@ import org.springframework.stereotype.Service;
 public class UserServiceImpl implements UserService {
     private static final Logger logger = LoggerFactory.getLogger(UserServiceImpl.class);
 
-    private TraineeDAO traineeDAO;
-    private TrainerDAO trainerDAO;
+    private UserDAOImpl userDAO;
 
     @Autowired
-    public void setTraineeDAO(TraineeDAO traineeDAO) {
-        this.traineeDAO = traineeDAO;
-    }
-
-    @Autowired
-    public void setTrainerDAO(TrainerDAO trainerDAO) {
-        this.trainerDAO = trainerDAO;
+    public void setUserDAO(UserDAOImpl userDAO) {
+        this.userDAO = userDAO;
     }
 
     @Override
     public boolean usernameExists(String username) {
         try {
-            boolean existsInTrainees = traineeDAO.findByUsername(username).isPresent();
-            boolean existsInTrainers = trainerDAO.findByUsername(username).isPresent();
-
-            if (existsInTrainees || existsInTrainers) {
+            boolean exists = userDAO.findByUsername(username).isPresent();
+            if (exists) {
                 logger.debug("Username '{}' already exists in the system", username);
                 return true;
             }

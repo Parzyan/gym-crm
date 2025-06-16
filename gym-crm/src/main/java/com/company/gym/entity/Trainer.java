@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 
 @Entity
 @Table(name = "trainers")
-public class Trainer {
+public class Trainer implements UserContainer {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

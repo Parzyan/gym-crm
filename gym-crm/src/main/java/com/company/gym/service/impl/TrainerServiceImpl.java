@@ -3,11 +3,8 @@ package com.company.gym.service.impl;
 import com.company.gym.dao.TraineeDAO;
 import com.company.gym.dao.TrainerDAO;
 import com.company.gym.dao.TrainingTypeDAO;
-import com.company.gym.entity.Trainee;
-import com.company.gym.entity.Trainer;
-import com.company.gym.entity.TrainingType;
-import com.company.gym.entity.User;
-import com.company.gym.service.AbstractBaseAndUpdateService;
+import com.company.gym.entity.*;
+import com.company.gym.service.AbstractUserService;
 import com.company.gym.service.TrainerService;
 import com.company.gym.util.PasswordGenerator;
 import com.company.gym.util.UsernameGenerator;
@@ -22,7 +19,7 @@ import java.util.Optional;
 
 @Service
 @Transactional
-public class TrainerServiceImpl extends AbstractBaseAndUpdateService<Trainer> implements TrainerService {
+public class TrainerServiceImpl extends AbstractUserService<Trainer> implements TrainerService {
     private static final Logger logger = LoggerFactory.getLogger(TrainerServiceImpl.class);
 
     private TrainerDAO trainerDAO;
@@ -30,7 +27,6 @@ public class TrainerServiceImpl extends AbstractBaseAndUpdateService<Trainer> im
     private TrainingTypeDAO trainingTypeDAO;
     private UsernameGenerator usernameGenerator;
     private PasswordGenerator passwordGenerator;
-    private AuthenticationServiceImpl authenticationServiceImpl;
 
     @Autowired
     public void setTrainerDAO(TrainerDAO trainerDAO) {
@@ -56,11 +52,6 @@ public class TrainerServiceImpl extends AbstractBaseAndUpdateService<Trainer> im
     @Autowired
     public void setPasswordGenerator(PasswordGenerator passwordGenerator) {
         this.passwordGenerator = passwordGenerator;
-    }
-
-    @Autowired
-    public void setAuthenticationService(AuthenticationServiceImpl authenticationServiceImpl) {
-        this.authenticationServiceImpl = authenticationServiceImpl;
     }
 
     @Override
@@ -93,7 +84,7 @@ public class TrainerServiceImpl extends AbstractBaseAndUpdateService<Trainer> im
     }
 
     @Override
-    public void changeTrainerPassword(String username, String oldPassword, String newPassword) {
+    public void changePassword(String username, String oldPassword, String newPassword) {
         Optional<Trainer> trainerOpt = trainerDAO.findByUsername(username);
         if (trainerOpt.isPresent()) {
             Trainer trainer = trainerOpt.get();
@@ -112,55 +103,35 @@ public class TrainerServiceImpl extends AbstractBaseAndUpdateService<Trainer> im
     }
 
     @Override
-    public Trainer updateTrainerProfile(String requesterPassword, String username, Long specializationId) {
-        if(authenticationServiceImpl.authenticateUser(username, requesterPassword)) {
-            Optional<Trainer> trainerOpt = trainerDAO.findByUsername(username);
-            if (trainerOpt.isEmpty()) {
-                logger.warn("Trainer not found for update: {}", username);
-            }
+    public Trainer updateTrainerProfile(Credentials credentials, Long specializationId) {
+        validateCredentials(credentials);
+        String username = credentials.getUsername();
 
-            Optional<TrainingType> trainingTypeOpt = trainingTypeDAO.findById(specializationId);
-            if (trainingTypeOpt.isEmpty()) {
-                logger.warn("Training type not found for ID: {}", specializationId);
-            }
+        Trainer trainer = trainerDAO.findByUsername(username)
+                .orElseThrow(() -> new IllegalArgumentException("Trainer not found"));
 
-            Trainer trainer = trainerOpt.orElseThrow(() -> new IllegalArgumentException("Trainer not found"));
-            TrainingType trainingType = trainingTypeOpt.orElseThrow(() -> new IllegalArgumentException("Training type not found"));
+        TrainingType trainingType = trainingTypeDAO.findById(specializationId)
+                .orElseThrow(() -> new IllegalArgumentException("Training type not found"));
 
-            trainer.setSpecialization(trainingType);
-            trainerDAO.update(trainer);
+        trainer.setSpecialization(trainingType);
+        trainerDAO.update(trainer);
 
-            logger.info("Updated trainer profile: {}", username);
-            return trainer;
-        }
-        else {
-            logger.warn("Authentication failed - username or password incorrect");
-            return null;
-        }
+        logger.info("Updated trainer profile: {}", username);
+        return trainer;
     }
 
     @Override
-    public void updateTrainerStatus(String requesterPassword, String username) {
-        if(authenticationServiceImpl.authenticateUser(username, requesterPassword)) {
-            Optional<Trainer> trainerOpt = trainerDAO.findByUsername(username);
-            if (trainerOpt.isPresent()) {
-                Trainer trainer = trainerOpt.get();
-                if (trainer.getUser().getIsActive()) {
-                    trainer.getUser().setIsActive(false);
-                    trainerDAO.update(trainer);
-                    logger.info("Updated trainer {} status to: {}", username, false);
-                } else {
-                    trainer.getUser().setIsActive(true);
-                    trainerDAO.update(trainer);
-                    logger.info("Trainer {} status already set to: {}", username, true);
-                }
-            } else {
-                logger.warn("Trainer not found for status update: {}", username);
-            }
-        }
-        else {
-            logger.warn("Authentication failed - username or password incorrect");
-        }
+    public void updateStatus(Credentials credentials) {
+        validateCredentials(credentials);
+        String username = credentials.getUsername();
+
+        Trainer trainer = trainerDAO.findByUsername(username)
+                .orElseThrow(() -> new IllegalArgumentException("Trainer not found"));
+
+        boolean newStatus = !trainer.getUser().getIsActive();
+        trainer.getUser().setIsActive(newStatus);
+        trainerDAO.update(trainer);
+        logger.info("Updated trainer {} status to: {}", username, newStatus);
     }
 
     @Override

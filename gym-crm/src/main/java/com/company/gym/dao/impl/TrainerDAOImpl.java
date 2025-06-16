@@ -1,7 +1,9 @@
 package com.company.gym.dao.impl;
 
 import com.company.gym.dao.TrainerDAO;
+import com.company.gym.entity.Trainee;
 import com.company.gym.entity.Trainer;
+import com.company.gym.exception.DAOException;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.TypedQuery;
@@ -14,11 +16,24 @@ import java.util.*;
 
 @Repository
 @Transactional
-public class TrainerDAOImpl implements TrainerDAO {
+public class TrainerDAOImpl extends BaseUserDAOImpl<Trainer> implements TrainerDAO {
     private static final Logger logger = LoggerFactory.getLogger(TrainerDAOImpl.class);
+
+    private static final String FIND_BY_USERNAME = "SELECT t FROM Trainer t JOIN t.user u WHERE u.username = :username";
+
+    private static final String FIND_BY_SPECIALIZATION_QUERY =
+            "SELECT t FROM Trainer t WHERE t.specialization.id = :trainingTypeId";
+    private static final String FIND_UNASSIGNED_TRAINERS_QUERY =
+            "SELECT t FROM Trainer t WHERE t.id NOT IN " +
+                    "(SELECT tr.trainer.id FROM Training tr WHERE tr.trainee.id = :traineeId)";
 
     @PersistenceContext
     private EntityManager entityManager;
+
+    @Override
+    protected Class<Trainer> getEntityClass() {
+        return Trainer.class;
+    }
 
     @Override
     public void save(Trainer trainer) {
@@ -27,20 +42,8 @@ public class TrainerDAOImpl implements TrainerDAO {
             logger.info("Saved new trainer with ID: {}", trainer.getId());
         } catch (Exception e) {
             logger.error("Error saving trainer", e);
-            throw e;
+            throw new DAOException("Error saving trainer", e);
         }
-    }
-
-    @Override
-    public Optional<Trainer> findById(Long id) {
-        Trainer trainer = entityManager.find(Trainer.class, id);
-        return Optional.ofNullable(trainer);
-    }
-
-    @Override
-    public List<Trainer> findAll() {
-        TypedQuery<Trainer> query = entityManager.createQuery("FROM Trainer", Trainer.class);
-        return query.getResultList();
     }
 
     @Override
@@ -50,57 +53,40 @@ public class TrainerDAOImpl implements TrainerDAO {
             logger.debug("Updated trainer with ID: {}", trainer.getId());
         } catch (Exception e) {
             logger.error("Error updating trainer with ID: {}", trainer.getId(), e);
-            throw e;
+            throw new DAOException("Error updating trainer", e);
         }
+    }
+
+    @Override
+    public List<Trainer> findBySpecialization(Long trainingTypeId) {
+        try {
+            TypedQuery<Trainer> query = entityManager.createQuery(FIND_BY_SPECIALIZATION_QUERY, Trainer.class);
+            query.setParameter("trainingTypeId", trainingTypeId);
+            return query.getResultList();
+        }
+        catch (Exception e) {
+            logger.error("Error finding trainer by specialization with ID: {}", trainingTypeId, e);
+            throw new DAOException("Error finding trainer by specialization with ID", e);
+        }
+    }
+
+    @Override
+    public List<Trainer> findTrainersNotAssignedToTrainee(Long traineeId) {
+        TypedQuery<Trainer> query = entityManager.createQuery(FIND_UNASSIGNED_TRAINERS_QUERY, Trainer.class);
+        query.setParameter("traineeId", traineeId);
+        return query.getResultList();
     }
 
     @Override
     public Optional<Trainer> findByUsername(String username) {
         try {
             TypedQuery<Trainer> query = entityManager.createQuery(
-                    "SELECT t FROM Trainer t JOIN t.user u WHERE u.username = :username", Trainer.class);
+                    FIND_BY_USERNAME, Trainer.class);
             query.setParameter("username", username);
             return query.getResultList().stream().findFirst();
         } catch (Exception e) {
             logger.error("Error finding trainer by username: {}", username, e);
             return Optional.empty();
         }
-    }
-
-    @Override
-    public List<Trainer> findBySpecialization(Long trainingTypeId) {
-        TypedQuery<Trainer> query = entityManager.createQuery(
-                "SELECT t FROM Trainer t WHERE t.specialization.id = :trainingTypeId", Trainer.class);
-        query.setParameter("trainingTypeId", trainingTypeId);
-        return query.getResultList();
-    }
-
-    @Override
-    public void changePassword(Long trainerId, String newPassword) {
-        Trainer trainer = entityManager.find(Trainer.class, trainerId);
-        if (trainer != null && trainer.getUser() != null) {
-            trainer.getUser().setPassword(newPassword);
-            entityManager.merge(trainer);
-            logger.info("Changed password for trainer ID: {}", trainerId);
-        }
-    }
-
-    @Override
-    public void updateActivity(Long trainerId, boolean isActive) {
-        Trainer trainer = entityManager.find(Trainer.class, trainerId);
-        if (trainer != null && trainer.getUser() != null) {
-            trainer.getUser().setIsActive(isActive);
-            entityManager.merge(trainer);
-            logger.info("Updated activity status for trainer ID: {} to {}", trainerId, isActive);
-        }
-    }
-
-    @Override
-    public List<Trainer> findTrainersNotAssignedToTrainee(Long traineeId) {
-        TypedQuery<Trainer> query = entityManager.createQuery(
-                "SELECT t FROM Trainer t WHERE t.id NOT IN " +
-                        "(SELECT tr.trainer.id FROM Training tr WHERE tr.trainee.id = :traineeId)", Trainer.class);
-        query.setParameter("traineeId", traineeId);
-        return query.getResultList();
     }
 }

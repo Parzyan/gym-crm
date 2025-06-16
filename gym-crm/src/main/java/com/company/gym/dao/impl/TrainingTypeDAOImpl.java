@@ -17,14 +17,16 @@ import java.util.Optional;
 public class TrainingTypeDAOImpl implements TrainingTypeDAO {
     private static final Logger logger = LoggerFactory.getLogger(TrainingTypeDAOImpl.class);
 
+    public static final String FIND_BY_NAME_QUERY =
+            "SELECT t FROM TrainingType t WHERE t.trainingTypeName = :name";
+
     @PersistenceContext
     private EntityManager entityManager;
 
     @Override
     public Optional<TrainingType> findByName(String name) {
         try {
-            TypedQuery<TrainingType> query = entityManager.createQuery(
-                    "SELECT t FROM TrainingType t WHERE t.trainingTypeName = :name", TrainingType.class);
+            TypedQuery<TrainingType> query = entityManager.createQuery(FIND_BY_NAME_QUERY, TrainingType.class);
             query.setParameter("name", name);
             return query.getResultList().stream().findFirst();
         } catch (Exception e) {

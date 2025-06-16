@@ -1,12 +1,12 @@
 package com.company.gym.service.impl;
 
-import com.company.gym.dao.TraineeDAO;
-import com.company.gym.dao.TrainerDAO;
+import com.company.gym.dao.impl.TraineeDAOImpl;
+import com.company.gym.dao.impl.TrainerDAOImpl;
+import com.company.gym.entity.Credentials;
 import com.company.gym.entity.Trainee;
 import com.company.gym.entity.Trainer;
 import com.company.gym.entity.User;
-import com.company.gym.service.AbstractCrudService;
-import com.company.gym.service.AuthenticationService;
+import com.company.gym.service.AbstractUserService;
 import com.company.gym.service.TraineeService;
 import com.company.gym.util.PasswordGenerator;
 import com.company.gym.util.UsernameGenerator;
@@ -17,31 +17,29 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
-import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
 @Transactional
-public class TraineeServiceImpl extends AbstractCrudService<Trainee> implements TraineeService {
+public class TraineeServiceImpl extends AbstractUserService<Trainee> implements TraineeService {
     private static final Logger logger = LoggerFactory.getLogger(TraineeServiceImpl.class);
 
     private UsernameGenerator usernameGenerator;
     private PasswordGenerator passwordGenerator;
-    private AuthenticationService authenticationService;
-    private TraineeDAO traineeDAO;
-    private TrainerDAO trainerDAO;
+    private TraineeDAOImpl traineeDAO;
+    private TrainerDAOImpl trainerDAO;
 
     @Autowired
-    public void setTraineeDAO(TraineeDAO traineeDAO) {
+    public void setTraineeDAO(TraineeDAOImpl traineeDAO) {
         this.traineeDAO = traineeDAO;
         super.setDao(traineeDAO);
     }
 
     @Autowired
-    public void setTrainerDAO(TraineeDAO traineeDAO) {
-        this.traineeDAO = traineeDAO;
+    public void setTrainerDAO(TrainerDAOImpl trainerDAO) {
+        this.trainerDAO = trainerDAO;
     }
 
     @Autowired
@@ -52,11 +50,6 @@ public class TraineeServiceImpl extends AbstractCrudService<Trainee> implements 
     @Autowired
     public void setPasswordGenerator(PasswordGenerator passwordGenerator) {
         this.passwordGenerator = passwordGenerator;
-    }
-
-    @Autowired
-    public void setAuthenticationService(AuthenticationService authenticationService) {
-        this.authenticationService = authenticationService;
     }
 
     @Override
@@ -86,7 +79,7 @@ public class TraineeServiceImpl extends AbstractCrudService<Trainee> implements 
     }
 
     @Override
-    public void changeTraineePassword(String username, String oldPassword, String newPassword) {
+    public void changePassword(String username, String oldPassword, String newPassword) {
         Optional<Trainee> traineeOpt = traineeDAO.findByUsername(username);
         if (traineeOpt.isPresent()) {
             Trainee trainee = traineeOpt.get();
@@ -105,92 +98,76 @@ public class TraineeServiceImpl extends AbstractCrudService<Trainee> implements 
     }
 
     @Override
-    public Trainee updateTraineeProfile(String requesterPassword, String username, Date dateOfBirth, String address) {
-        if(authenticationService.authenticateUser(username, requesterPassword)) {
-            Optional<Trainee> traineeOpt = traineeDAO.findByUsername(username);
-            if (traineeOpt.isPresent()) {
-                Trainee trainee = traineeOpt.get();
-                if (dateOfBirth != null) {
-                    trainee.setDateOfBirth(dateOfBirth);
-                }
-                if (address != null) {
-                    trainee.setAddress(address);
-                }
-                traineeDAO.update(trainee);
-                logger.info("Updated trainee profile: {}", username);
-                return trainee;
+    public Trainee updateTraineeProfile(Credentials credentials, Date dateOfBirth, String address) {
+        validateCredentials(credentials);
+        String username = credentials.getUsername();
+        Optional<Trainee> traineeOpt = traineeDAO.findByUsername(username);
+        if (traineeOpt.isPresent()) {
+            Trainee trainee = traineeOpt.get();
+            if (dateOfBirth != null) {
+                trainee.setDateOfBirth(dateOfBirth);
             }
-            logger.warn("Trainee not found for update: {}", username);
-            throw new IllegalArgumentException("Trainee not found for update");
+            if (address != null) {
+                trainee.setAddress(address);
+            }
+            traineeDAO.update(trainee);
+            logger.info("Updated trainee profile: {}", username);
+            return trainee;
         }
-        else {
-            logger.warn("Authentication failed - username or password incorrect");
-            throw new SecurityException("Incorrect username or password");
-        }
+        logger.warn("Trainee not found for update: {}", username);
+        throw new IllegalArgumentException("Trainee not found for update");
     }
 
     @Override
-    public void updateTraineeStatus(String requesterPassword, String username) {
-        if(authenticationService.authenticateUser(username, requesterPassword)) {
-            Optional<Trainee> traineeOpt = traineeDAO.findByUsername(username);
-            if (traineeOpt.isPresent()) {
-                Trainee trainee = traineeOpt.get();
-                if (trainee.getUser().getIsActive()) {
-                    trainee.getUser().setIsActive(false);
-                    traineeDAO.update(trainee);
-                    logger.info("Updated trainee {} status to: {}", username, false);
-                } else {
-                    trainee.getUser().setIsActive(true);
-                    traineeDAO.update(trainee);
-                    logger.info("Trainee {} status already set to: {}", username, true);
-                }
+    public void updateStatus(Credentials credentials) {
+        validateCredentials(credentials);
+        String username = credentials.getUsername();
+        Optional<Trainee> traineeOpt = traineeDAO.findByUsername(username);
+        if (traineeOpt.isPresent()) {
+            Trainee trainee = traineeOpt.get();
+            if (trainee.getUser().getIsActive()) {
+                trainee.getUser().setIsActive(false);
+                traineeDAO.update(trainee);
+                logger.info("Updated trainee {} status to: {}", username, false);
             } else {
-                logger.warn("Trainee not found for status update: {}", username);
-                throw new IllegalArgumentException("Trainee not found");
+                trainee.getUser().setIsActive(true);
+                traineeDAO.update(trainee);
+                logger.info("Trainee {} status already set to: {}", username, true);
             }
-        }
-        else {
-            logger.warn("Authentication failed - username or password incorrect");
-            throw new SecurityException("Incorrect username or password");
+        } else {
+            logger.warn("Trainee not found for status update: {}", username);
+            throw new IllegalArgumentException("Trainee not found");
         }
     }
 
     @Override
     @Transactional
-    public void deleteTraineeProfile(String requesterPassword, String username) {
-        if(authenticationService.authenticateUser(username, requesterPassword)) {
-            Optional<Trainee> traineeOpt = traineeDAO.findByUsername(username);
-            if (traineeOpt.isPresent()) {
-                traineeDAO.delete(traineeOpt.get().getId());
-                logger.info("Deleted trainee profile: {}", username);
-            } else {
-                logger.warn("Trainee not found for deletion: {}", username);
-                throw new IllegalArgumentException("Trainee not found");
-            }
-        }
-        else {
-            logger.warn("Authentication failed - username or password incorrect");
-            throw new SecurityException("Incorrect username or password");
+    public void deleteTraineeProfile(Credentials credentials) {
+        validateCredentials(credentials);
+        String username = credentials.getUsername();
+        Optional<Trainee> traineeOpt = traineeDAO.findByUsername(username);
+        if (traineeOpt.isPresent()) {
+            traineeDAO.delete(traineeOpt.get().getId());
+            logger.info("Deleted trainee profile: {}", username);
+        } else {
+            logger.warn("Trainee not found for deletion: {}", username);
+            throw new IllegalArgumentException("Trainee not found");
         }
     }
 
     @Override
-    public List<Trainee> getActiveTrainees() {
-        return traineeDAO.findActiveTrainees();
-    }
+    public void updateTraineeTrainers(Credentials credentials, Set<Long> trainerIds) {
+        validateCredentials(credentials);
+        String traineeUsername = credentials.getUsername();
+        Trainee trainee = traineeDAO.findByUsername(traineeUsername)
+                .orElseThrow(() -> new IllegalArgumentException("Trainee not found"));
 
-    public void updateTraineeTrainers(String requesterPassword, String traineeUsername, Set<Long> trainerIds) {
-        if(authenticationService.authenticateUser(traineeUsername, requesterPassword)) {
-            Trainee trainee = traineeDAO.findByUsername(traineeUsername)
-                    .orElseThrow(() -> new IllegalArgumentException("Trainee not found"));
+        Set<Trainer> trainers = trainerIds.stream()
+                .map(id -> trainerDAO.findById(id)
+                        .orElseThrow(() -> new IllegalArgumentException("Trainer not found: " + id)))
+                .collect(Collectors.toSet());
 
-            Set<Trainer> trainers = trainerIds.stream()
-                    .map(id -> trainerDAO.findById(id)
-                            .orElseThrow(() -> new IllegalArgumentException("Trainer not found: " + id)))
-                    .collect(Collectors.toSet());
-
-            trainee.setTrainers(trainers);
-            traineeDAO.update(trainee);
-        }
+        trainee.setTrainers(trainers);
+        traineeDAO.update(trainee);
     }
 }

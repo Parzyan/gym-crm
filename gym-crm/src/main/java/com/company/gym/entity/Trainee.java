@@ -6,7 +6,7 @@ import java.util.*;
 
 @Entity
 @Table(name = "trainees")
-public class Trainee {
+public class Trainee implements UserContainer {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

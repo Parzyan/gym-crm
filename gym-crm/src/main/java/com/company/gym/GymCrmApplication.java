@@ -1,5 +1,6 @@
 package com.company.gym;
 
+import com.company.gym.entity.Credentials;
 import com.company.gym.entity.Trainee;
 import com.company.gym.entity.Trainer;
 import com.company.gym.facade.GymFacade;
@@ -11,7 +12,6 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 
-import java.util.Arrays;
 import java.util.Date;
 import java.util.Optional;
 
@@ -30,6 +30,7 @@ public class GymCrmApplication implements CommandLineRunner {
 
 	@Override
 	public void run(String... args) {
+		logger.info("Created trainee");
 		gymFacade.createTrainee("Bob", "Johnson", new Date(90, 0, 1), "123 Street");
 		gymFacade.createTrainee("Bob", "Johnson", new Date(91, 0, 1), "123 Street");
 		gymFacade.createTrainee("Bob", "Johnson", new Date(92, 0, 1), "123 Street");
@@ -51,14 +52,5 @@ public class GymCrmApplication implements CommandLineRunner {
 		} else {
 			logger.warn("Trainer with the id of 2 not found");
 		}
-
-		gymFacade.updateTraineeStatus("password12", "Bob.Johnson2");
-
-		gymFacade.createTraining("Bob.Johnson1", "password12", "Mike.Johnson1", "password12",
-				"Introduction", 2L, new Date(), 20);
-
-		gymFacade.deleteTrainee("password12", "Bob.Johnson1");
-
-		logger.info("All Active trainees: {}", Arrays.toString(gymFacade.getActiveTrainees().toArray()));
 	}
 }

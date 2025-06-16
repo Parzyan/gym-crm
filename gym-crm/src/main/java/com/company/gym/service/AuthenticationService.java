@@ -1,5 +1,7 @@
 package com.company.gym.service;
 
+import com.company.gym.entity.Credentials;
+
 public interface AuthenticationService {
-    boolean authenticateUser(String username, String password);
+    void authenticate(Credentials credentials);
 }
