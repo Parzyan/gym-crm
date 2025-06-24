@@ -1,52 +1,37 @@
 package com.company.gym.util;
 
-import com.company.gym.dao.BaseAndUpdateDAO;
-import com.company.gym.dao.TraineeDAO;
-import com.company.gym.dao.impl.TraineeDAOImpl;
-import com.company.gym.dao.impl.TrainerDAOImpl;
-import com.company.gym.entity.Trainee;
-import com.company.gym.entity.Trainer;
-import com.company.gym.service.UserService;
-import org.junit.jupiter.api.BeforeEach;
+import com.company.gym.service.impl.UserServiceImpl;
 import org.junit.jupiter.api.Test;
-
-import java.util.HashMap;
-import java.util.Map;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
+@ExtendWith(MockitoExtension.class)
 class UsernameGeneratorTest {
 
-    private UsernameGenerator usernameGenerator;
-    private UserService userService;
-    private TraineeDAO traineeDAO;
-    private BaseAndUpdateDAO<Trainer> trainerDAO;
-    private Map<Long, Trainee> traineeStorage;
-    private Map<Long, Trainer> trainerStorage;
+    @Mock
+    private UserServiceImpl userService;
 
-    @BeforeEach
-    void setUp() {
-        traineeStorage = new HashMap<>();
-        trainerStorage = new HashMap<>();
-        traineeDAO = new TraineeDAOImpl(traineeStorage);
-        trainerDAO = new TrainerDAOImpl(trainerStorage);
-        userService = new UserService();
-        userService.setTraineeDAO(traineeDAO);
-        userService.setTrainerDAO(trainerDAO);
-        usernameGenerator = new UsernameGenerator(userService);
-    }
+    @InjectMocks
+    private UsernameGenerator usernameGenerator;
 
     @Test
     void generateUsername() {
+        when(userService.usernameExists("John.Smith")).thenReturn(false);
+
         String username = usernameGenerator.generateUsername("John", "Smith");
         assertEquals("John.Smith", username);
     }
 
     @Test
     void generateUsername_WithDuplicate() {
-        Trainee existing = new Trainee();
-        existing.setUsername("John.Smith");
-        traineeStorage.put(1L, existing);
+        when(userService.usernameExists("John.Smith")).thenReturn(true);
+        when(userService.usernameExists("John.Smith1")).thenReturn(false);
 
         String username = usernameGenerator.generateUsername("John", "Smith");
         assertEquals("John.Smith1", username);
@@ -54,17 +39,10 @@ class UsernameGeneratorTest {
 
     @Test
     void generateUsername_WithMultipleDuplicates() {
-        Trainee existing1 = new Trainee();
-        existing1.setUsername("John.Smith");
-        traineeStorage.put(1L, existing1);
-
-        Trainee existing2 = new Trainee();
-        existing2.setUsername("John.Smith1");
-        traineeStorage.put(2L, existing2);
-
-        Trainee existing3 = new Trainee();
-        existing3.setUsername("John.Smith2");
-        traineeStorage.put(3L, existing3);
+        when(userService.usernameExists("John.Smith")).thenReturn(true);
+        when(userService.usernameExists("John.Smith1")).thenReturn(true);
+        when(userService.usernameExists("John.Smith2")).thenReturn(true);
+        when(userService.usernameExists("John.Smith3")).thenReturn(false);
 
         String username = usernameGenerator.generateUsername("John", "Smith");
         assertEquals("John.Smith3", username);
@@ -72,6 +50,8 @@ class UsernameGeneratorTest {
 
     @Test
     void generateUsername_WithEmptyNames() {
+        when(userService.usernameExists(".")).thenReturn(false);
+
         String username = usernameGenerator.generateUsername("", "");
         assertEquals(".", username);
     }

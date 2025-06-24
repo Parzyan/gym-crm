@@ -1,15 +1,49 @@
 package com.company.gym.entity;
 
-import java.time.LocalDate;
+import jakarta.persistence.*;
 
+import java.util.Date;
+
+@Entity
+@Table(name = "trainings")
 public class Training {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    private Long traineeId;
-    private Long trainerId;
+
+    @ManyToOne
+    @JoinColumn(name = "trainee_id", nullable = false)
+    private Trainee trainee;
+
+    @ManyToOne
+    @JoinColumn(name = "trainer_id", nullable = false)
+    private Trainer trainer;
+
+    @Column(name = "training_name", nullable = false)
     private String trainingName;
+
+    @ManyToOne
+    @JoinColumn(name = "training_type_id", nullable = false)
     private TrainingType trainingType;
-    private LocalDate trainingDate;
+
+    @Column(name = "training_date", nullable = false)
+    private Date trainingDate;
+
+    @Column(name = "duration", nullable = false)
     private Integer duration;
+
+    public Training() {
+    }
+
+    public Training(Trainee trainee, Trainer trainer, String trainingName,
+                    TrainingType trainingType, Date trainingDate, Integer duration) {
+        this.trainee = trainee;
+        this.trainer = trainer;
+        this.trainingName = trainingName;
+        this.trainingType = trainingType;
+        this.trainingDate = trainingDate;
+        this.duration = duration;
+    }
 
     public Long getId() {
         return id;
@@ -19,20 +53,20 @@ public class Training {
         this.id = id;
     }
 
-    public Long getTraineeId() {
-        return traineeId;
+    public Trainee getTrainee() {
+        return trainee;
     }
 
-    public void setTraineeId(Long traineeId) {
-        this.traineeId = traineeId;
+    public void setTrainee(Trainee trainee) {
+        this.trainee = trainee;
     }
 
-    public Long getTrainerId() {
-        return trainerId;
+    public Trainer getTrainer() {
+        return trainer;
     }
 
-    public void setTrainerId(Long trainerId) {
-        this.trainerId = trainerId;
+    public void setTrainer(Trainer trainer) {
+        this.trainer = trainer;
     }
 
     public String getTrainingName() {
@@ -51,11 +85,11 @@ public class Training {
         this.trainingType = trainingType;
     }
 
-    public LocalDate getTrainingDate() {
+    public Date getTrainingDate() {
         return trainingDate;
     }
 
-    public void setTrainingDate(LocalDate trainingDate) {
+    public void setTrainingDate(Date trainingDate) {
         this.trainingDate = trainingDate;
     }
 
@@ -71,10 +105,10 @@ public class Training {
     public String toString() {
         return "Training{" +
                 "id=" + id +
-                ", traineeId=" + traineeId +
-                ", trainerId=" + trainerId +
+                ", trainee=" + trainee +
+                ", trainer=" + trainer +
                 ", trainingName='" + trainingName + '\'' +
-                ", trainingType=" + trainingType.name() +
+                ", trainingType=" + trainingType +
                 ", trainingDate=" + trainingDate +
                 ", duration=" + duration +
                 '}';

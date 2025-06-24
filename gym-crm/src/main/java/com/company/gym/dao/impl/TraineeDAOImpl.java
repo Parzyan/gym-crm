@@ -2,57 +2,78 @@ package com.company.gym.dao.impl;
 
 import com.company.gym.dao.TraineeDAO;
 import com.company.gym.entity.Trainee;
+import com.company.gym.exception.DAOException;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.TypedQuery;
+import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Repository;
 
-import java.util.*;
+import java.util.Optional;
 
 @Repository
-public class TraineeDAOImpl implements TraineeDAO {
+@Transactional
+public class TraineeDAOImpl extends BaseUserDAOImpl<Trainee> implements TraineeDAO {
     private static final Logger logger = LoggerFactory.getLogger(TraineeDAOImpl.class);
 
-    private final Map<Long, Trainee> storage;
-    private Long currentId = 1L;
+    private static final String FIND_BY_USERNAME = "SELECT t FROM Trainee t JOIN t.user u WHERE u.username = :username";
 
-    @Autowired
-    public TraineeDAOImpl(@Qualifier("traineeStorage") Map<Long, Trainee> storage) {
-        this.storage = storage;
-        if (!storage.isEmpty()) {
-            currentId = Collections.max(storage.keySet()) + 1;
-        }
+    @PersistenceContext
+    private EntityManager entityManager;
+
+    @Override
+    protected Class<Trainee> getEntityClass() {
+        return Trainee.class;
     }
 
     @Override
     public void save(Trainee trainee) {
-        trainee.setId(currentId++);
-        storage.put(trainee.getId(), trainee);
-    }
-
-    @Override
-    public Optional<Trainee> findById(Long id) {
-        return Optional.ofNullable(storage.get(id));
-    }
-
-    @Override
-    public List<Trainee> findAll() {
-        return new ArrayList<>(storage.values());
+        try {
+            entityManager.persist(trainee);
+            logger.info("Saved new trainee with ID: {}", trainee.getId());
+        } catch (Exception e) {
+            logger.error("Error saving trainee", e);
+            throw new DAOException("Error saving trainee", e);
+        }
     }
 
     @Override
     public void update(Trainee trainee) {
-        if (storage.containsKey(trainee.getId())) {
-            storage.put(trainee.getId(), trainee);
+        try {
+            entityManager.merge(trainee);
             logger.debug("Updated trainee with ID: {}", trainee.getId());
-        } else {
-            logger.warn("Attempted to update non-existent trainee with ID: {}", trainee.getId());
+        } catch (Exception e) {
+            logger.error("Error updating trainee with ID: {}", trainee.getId(), e);
+            throw new DAOException("Error updating trainee", e);
         }
     }
 
     @Override
     public void delete(Long id) {
-        storage.remove(id);
+        try {
+            Trainee trainee = entityManager.find(Trainee.class, id);
+            if (trainee != null) {
+                entityManager.remove(trainee);
+                logger.info("Deleted trainee with ID: {}", id);
+            }
+        } catch (Exception e) {
+            logger.error("Error deleting trainee with ID: {}", id, e);
+            throw new DAOException("Error deleting trainee", e);
+        }
+    }
+
+    @Override
+    public Optional<Trainee> findByUsername(String username) {
+        try {
+            TypedQuery<Trainee> query = entityManager.createQuery(
+                    FIND_BY_USERNAME, Trainee.class);
+            query.setParameter("username", username);
+            return query.getResultList().stream().findFirst();
+        } catch (Exception e) {
+            logger.error("Error finding trainee by username: {}", username, e);
+            return Optional.empty();
+        }
     }
 }

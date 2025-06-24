@@ -1,7 +1,45 @@
 package com.company.gym.entity;
 
-public class Trainer extends User {
+import jakarta.persistence.*;
+
+@Entity
+@Table(name = "trainers")
+public class Trainer implements UserContainer {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne
+    @JoinColumn(name = "training_type_id", nullable = false)
     private TrainingType specialization;
+
+    @OneToOne(cascade = CascadeType.ALL)
+    @JoinColumn(name = "user_id", referencedColumnName = "id", nullable = false)
+    private User user;
+
+    public Trainer() {
+    }
+
+    public Trainer(TrainingType specialization, User user) {
+        this.specialization = specialization;
+        this.user = user;
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
+    }
 
     public TrainingType getSpecialization() {
         return specialization;
@@ -14,13 +52,9 @@ public class Trainer extends User {
     @Override
     public String toString() {
         return "Trainer{" +
-                "id=" + getId() +
-                ", firstName='" + getFirstName() + '\'' +
-                ", lastName='" + getLastName() + '\'' +
-                ", username='" + getUsername() + '\'' +
-                ", password='" + getPassword() + '\'' +
-                ", isActive='" + getIsActive() + '\'' +
-                ", specialization=" + specialization.name() +
+                "id=" + id +
+                ", specialization=" + specialization +
+                ", user=" + user +
                 '}';
     }
 }
