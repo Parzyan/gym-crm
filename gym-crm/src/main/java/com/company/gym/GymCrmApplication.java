@@ -38,7 +38,7 @@ public class GymCrmApplication implements CommandLineRunner {
 
 		gymFacade.createTrainer("Mike", "Johnson", 1L);
 
-		Optional<Trainee> a = gymFacade.getTrainee(2L);
+		/*Optional<Trainee> a = gymFacade.getTrainee(2L);
 		Optional<Trainer> b = gymFacade.getTrainer(2L);
 
 		if (a.isPresent()) {
@@ -51,6 +51,6 @@ public class GymCrmApplication implements CommandLineRunner {
 			logger.info("Trainer with the id of 2: {}", b.get().getUser().getUsername());
 		} else {
 			logger.warn("Trainer with the id of 2 not found");
-		}
+		}*/
 	}
 }

@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -39,5 +40,10 @@ public class TrainingTypeDAOImpl implements TrainingTypeDAO {
     public Optional<TrainingType> findById(Long id) {
         TrainingType trainingType = entityManager.find(TrainingType.class, id);
         return Optional.ofNullable(trainingType);
+    }
+
+    @Override
+    public List<TrainingType> findAll() {
+        return entityManager.createQuery("FROM TrainingType", TrainingType.class).getResultList();
     }
 }

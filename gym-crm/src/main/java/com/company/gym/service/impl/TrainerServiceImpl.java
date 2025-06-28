@@ -56,6 +56,10 @@ public class TrainerServiceImpl extends AbstractUserService<Trainer> implements 
 
     @Override
     public Trainer createTrainerProfile(String firstName, String lastName, Long specializationId) {
+        if(specializationId == null) {
+            throw new IllegalArgumentException("Specialization id cannot be null");
+        }
+
         Optional<TrainingType> trainingTypeOpt = trainingTypeDAO.findById(specializationId);
         if(firstName == null || lastName == null) {
             throw new IllegalArgumentException("FirstName and LastName must not be null");
