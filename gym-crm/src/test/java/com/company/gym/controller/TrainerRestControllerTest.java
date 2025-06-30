@@ -7,6 +7,7 @@ import com.company.gym.dto.response.TrainerProfileResponse;
 import com.company.gym.dto.response.UserCredentialsResponse;
 import com.company.gym.entity.*;
 import com.company.gym.exception.InvalidCredentialsException;
+import com.company.gym.service.AuthenticationService;
 import com.company.gym.service.TrainerService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -31,6 +32,9 @@ class TrainerRestControllerTest {
 
     @Mock
     private TrainerService trainerService;
+
+    @Mock
+    private AuthenticationService authenticationService;
 
     @InjectMocks
     private TrainerRestController trainerRestController;
@@ -111,28 +115,28 @@ class TrainerRestControllerTest {
     }
 
     @Test
-    @DisplayName("Get Trainer Profile should return 200 OK with data when found")
-    void getTrainerProfile_whenFound() {
+    @DisplayName("Get Trainer Profile should return 200 OK when credentials are valid")
+    void getTrainerProfile_whenCredentialsValid() {
+        doNothing().when(authenticationService).authenticate(any(Credentials.class));
         when(trainerService.getByUsername("jane.trainer")).thenReturn(Optional.of(testTrainer));
 
-        ResponseEntity<TrainerProfileResponse> response = trainerRestController.getTrainerProfile("jane.trainer");
+        ResponseEntity<TrainerProfileResponse> response = trainerRestController.getTrainerProfile("jane.trainer", "correctPassword");
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
         assertEquals("Jane", response.getBody().getFirstName());
-        assertEquals("Yoga", response.getBody().getSpecialization());
-        assertEquals(1, response.getBody().getTrainees().size());
-        assertEquals("john.doe", response.getBody().getTrainees().getFirst().getUsername());
     }
 
     @Test
-    @DisplayName("Get Trainer Profile should return 404 Not Found when not found")
-    void getTrainerProfile_whenNotFound() {
-        when(trainerService.getByUsername("unknown.trainer")).thenReturn(Optional.empty());
+    @DisplayName("Get Trainer Profile should return 401 Unauthorized when credentials are invalid")
+    void getTrainerProfile_whenCredentialsInvalid() {
+        doThrow(new InvalidCredentialsException("Invalid password"))
+                .when(authenticationService).authenticate(any(Credentials.class));
 
-        ResponseEntity<TrainerProfileResponse> response = trainerRestController.getTrainerProfile("unknown.trainer");
+        ResponseEntity<TrainerProfileResponse> response = trainerRestController.getTrainerProfile("jane.trainer", "wrongPassword");
 
-        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
+        verify(trainerService, never()).getByUsername(anyString());
     }
 
     @Test

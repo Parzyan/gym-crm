@@ -12,6 +12,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
+@Tag(name = "Authentication", description = "Operations for user login and password management")
 @RestController
 @RequestMapping("/auth")
 public class AuthController {
@@ -29,8 +36,15 @@ public class AuthController {
         this.trainerService = trainerService;
     }
 
+    @Operation(summary = "Authenticate a user", description = "Validates user credentials and logs them in.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Successfully authenticated"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized - Invalid credentials")
+    })
     @GetMapping("/login")
-    public ResponseEntity<Void> login(@RequestParam String username, @RequestParam String password) {
+    public ResponseEntity<Void> login(
+            @Parameter(description = "The username of the user", required = true) @RequestParam String username,
+            @Parameter(description = "The password of the user", required = true) @RequestParam String password) {
         try {
             authService.authenticate(new Credentials(username, password));
             logger.info("Login successful for user: {}", username);
@@ -41,6 +55,11 @@ public class AuthController {
         }
     }
 
+    @Operation(summary = "Change a user's login password", description = "Allows a user to change their password after providing the old one.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Password changed successfully"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized - Incorrect old password or user not found")
+    })
     @PutMapping("/change-password")
     public ResponseEntity<Void> changePassword(@RequestBody ChangePasswordRequest request) {
         try {

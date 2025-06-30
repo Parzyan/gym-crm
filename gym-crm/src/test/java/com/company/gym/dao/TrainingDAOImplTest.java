@@ -74,7 +74,7 @@ class TrainingDAOImplTest {
     void findTrainingsByTraineeAndCriteria_AllParams() {
         Date fromDate = new Date();
         Date toDate = new Date();
-        String trainerName = "John Doe";
+        String trainerUsername = "john.doe";
         Long trainingTypeId = 1L;
         List<Training> expected = List.of(new Training());
 
@@ -82,13 +82,13 @@ class TrainingDAOImplTest {
         when(query.getResultList()).thenReturn(expected);
 
         List<Training> result = trainingDAO.findTrainingsByTraineeAndCriteria(
-                1L, fromDate, toDate, trainerName, trainingTypeId);
+                1L, fromDate, toDate, trainerUsername, trainingTypeId);
 
         assertEquals(1, result.size());
         verify(query).setParameter("traineeId", 1L);
         verify(query).setParameter("fromDate", fromDate);
         verify(query).setParameter("toDate", toDate);
-        verify(query).setParameter("trainerName", "%John Doe%");
+        verify(query).setParameter("trainerUsername", "john.doe");
         verify(query).setParameter("trainingTypeId", trainingTypeId);
     }
 
@@ -114,20 +114,20 @@ class TrainingDAOImplTest {
     void findTrainingsByTrainerAndCriteria_AllParams() {
         Date fromDate = new Date();
         Date toDate = new Date();
-        String traineeName = "Jane Smith";
+        String traineeUsername = "jane.smith";
         List<Training> expected = List.of(new Training());
 
         when(entityManager.createQuery(anyString(), eq(Training.class))).thenReturn(query);
         when(query.getResultList()).thenReturn(expected);
 
         List<Training> result = trainingDAO.findTrainingsByTrainerAndCriteria(
-                1L, fromDate, toDate, traineeName);
+                1L, fromDate, toDate, traineeUsername);
 
         assertEquals(1, result.size());
         verify(query).setParameter("trainerId", 1L);
         verify(query).setParameter("fromDate", fromDate);
         verify(query).setParameter("toDate", toDate);
-        verify(query).setParameter("traineeName", "%Jane Smith%");
+        verify(query).setParameter("traineeUsername", "jane.smith");
     }
 
     @Test

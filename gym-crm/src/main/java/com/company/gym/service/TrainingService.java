@@ -10,7 +10,8 @@ public interface TrainingService {
     Training createTraining(Credentials traineeCreds, Credentials trainerCreds, String trainingName,
                             Long trainingTypeId, Date trainingDate, Integer duration);
     List<Training> getTraineeTrainings(Credentials credentials, Date fromDate, Date toDate,
-                                       String trainerName, Long trainingTypeId);
-    List<Training> getTrainerTrainings(Credentials credentials, Date fromDate,
-                                       Date toDate, String traineeName);
+                                       String trainerUsername, Long trainingTypeId);
+
+    List<Training> getTrainerTrainings(Credentials credentials, Date fromDate, Date toDate,
+                                       String traineeUsername);
 }

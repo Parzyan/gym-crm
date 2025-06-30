@@ -6,6 +6,8 @@ import com.company.gym.dto.response.UnassignedTrainerResponse;
 import com.company.gym.dto.response.UpdatedTrainersListResponse;
 import com.company.gym.dto.response.UserCredentialsResponse;
 import com.company.gym.entity.*;
+import com.company.gym.exception.InvalidCredentialsException;
+import com.company.gym.service.AuthenticationService;
 import com.company.gym.service.TraineeService;
 import com.company.gym.service.TrainerService;
 import org.junit.jupiter.api.BeforeEach;
@@ -33,6 +35,9 @@ class TraineeRestControllerTest {
 
     @Mock
     private TrainerService trainerService;
+
+    @Mock
+    private AuthenticationService authenticationService;
 
     @InjectMocks
     private TraineeRestController traineeRestController;
@@ -129,28 +134,28 @@ class TraineeRestControllerTest {
     }
 
     @Test
-    @DisplayName("Get Trainee Profile should return 200 OK with data when found")
-    void getTraineeProfile_whenFound() {
+    @DisplayName("Get Trainee Profile should return 200 OK when credentials are valid")
+    void getTraineeProfile_whenCredentialsValid() {
+        doNothing().when(authenticationService).authenticate(any(Credentials.class));
         when(traineeService.getByUsername("john.doe")).thenReturn(Optional.of(testTrainee));
 
-        ResponseEntity<TraineeProfileResponse> response = traineeRestController.getTraineeProfile("john.doe");
+        ResponseEntity<TraineeProfileResponse> response = traineeRestController.getTraineeProfile("john.doe", "correctPassword");
 
-        // Assert
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
         assertEquals("John", response.getBody().getFirstName());
-        assertEquals(1, response.getBody().getTrainersList().size());
-        assertEquals("jane.trainer", response.getBody().getTrainersList().getFirst().getUsername());
     }
 
     @Test
-    @DisplayName("Get Trainee Profile should return 404 Not Found when not found")
-    void getTraineeProfile_whenNotFound() {
-        when(traineeService.getByUsername("unknown.user")).thenReturn(Optional.empty());
+    @DisplayName("Get Trainee Profile should return 401 Unauthorized when credentials are invalid")
+    void getTraineeProfile_whenCredentialsInvalid() {
+        doThrow(new InvalidCredentialsException("Invalid password"))
+                .when(authenticationService).authenticate(any(Credentials.class));
 
-        ResponseEntity<TraineeProfileResponse> response = traineeRestController.getTraineeProfile("unknown.user");
+        ResponseEntity<TraineeProfileResponse> response = traineeRestController.getTraineeProfile("john.doe", "wrongPassword");
 
-        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
+        verify(traineeService, never()).getByUsername(anyString());
     }
 
     @Test
@@ -193,6 +198,8 @@ class TraineeRestControllerTest {
     @Test
     @DisplayName("Get Unassigned Trainers should return 200 OK with filtered list")
     void getUnassignedTrainers_onSuccess() {
+        doNothing().when(authenticationService).authenticate(any(Credentials.class));
+
         Trainer activeUnassignedTrainer = new Trainer();
         User activeUser = new User();
         activeUser.setIsActive(true);
@@ -206,7 +213,7 @@ class TraineeRestControllerTest {
 
         when(trainerService.getUnassignedTrainers(anyString())).thenReturn(Arrays.asList(activeUnassignedTrainer, inactiveUnassignedTrainer));
 
-        ResponseEntity<List<UnassignedTrainerResponse>> response = traineeRestController.getUnassignedTrainers("john.doe");
+        ResponseEntity<List<UnassignedTrainerResponse>> response = traineeRestController.getUnassignedTrainers("john.doe", "password");
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());

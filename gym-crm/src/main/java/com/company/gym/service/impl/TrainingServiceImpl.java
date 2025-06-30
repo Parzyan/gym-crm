@@ -76,25 +76,25 @@ public class TrainingServiceImpl extends AbstractBaseService<Training> implement
 
     @Override
     public List<Training> getTraineeTrainings(Credentials credentials, Date fromDate, Date toDate,
-                                              String trainerName, Long trainingTypeId) {
+                                              String trainerUsername, Long trainingTypeId) {
         validateCredentials(credentials);
 
         Trainee trainee = traineeDAO.findByUsername(credentials.getUsername())
                 .orElseThrow(() -> new IllegalArgumentException("Trainee not found"));
 
         return trainingDAO.findTrainingsByTraineeAndCriteria(
-                trainee.getId(), fromDate, toDate, trainerName, trainingTypeId);
+                trainee.getId(), fromDate, toDate, trainerUsername, trainingTypeId);
     }
 
     @Override
     public List<Training> getTrainerTrainings(Credentials credentials, Date fromDate, Date toDate,
-                                              String traineeName) {
+                                              String traineeUsername) {
         validateCredentials(credentials);
 
         Trainer trainer = trainerDAO.findByUsername(credentials.getUsername())
                 .orElseThrow(() -> new IllegalArgumentException("Trainer not found"));
 
         return trainingDAO.findTrainingsByTrainerAndCriteria(
-                trainer.getId(), fromDate, toDate, traineeName);
+                trainer.getId(), fromDate, toDate, traineeUsername);
     }
 }

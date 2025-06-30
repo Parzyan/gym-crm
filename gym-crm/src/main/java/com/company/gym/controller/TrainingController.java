@@ -16,12 +16,18 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+@Tag(name = "Training Management", description = "Endpoints for creating and retrieving training records")
 @RestController
 @RequestMapping("/trainings")
 public class TrainingController {
@@ -38,21 +44,26 @@ public class TrainingController {
         this.trainingTypeService = trainingTypeService;
     }
 
+    @Operation(summary = "Get a trainee's training sessions", description = "Retrieves a list of trainings for a specific trainee, with optional filters. Requires user credentials for authentication.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Successfully retrieved trainings list"),
+            @ApiResponse(responseCode = "400", description = "Bad Request - Invalid training type provided"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized - Authentication failure")
+    })
     @GetMapping("/trainee")
     public ResponseEntity<List<TraineeTrainingResponse>> getTraineeTrainings(
-            @RequestParam String username,
-            @RequestParam String password,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Date periodFrom,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Date periodTo,
-            @RequestParam(required = false) String trainerName,
-            @RequestParam(required = false) String trainingType) {
+            @Parameter(description = "Username of the trainee", required = true) @RequestParam String username,
+            @Parameter(description = "Password of the trainee (for authentication)", required = true) @RequestParam String password,
+            @Parameter(description = "Filter trainings from this date onwards (YYYY-MM-DD)") @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Date periodFrom,
+            @Parameter(description = "Filter trainings up to this date (YYYY-MM-DD)") @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Date periodTo,
+            @Parameter(description = "Filter by trainer's username") @RequestParam(required = false) String trainerUsername,
+            @Parameter(description = "Filter by training type name (e.g., 'Cardio')") @RequestParam(required = false) String trainingType) {
 
         try {
             Credentials credentials = new Credentials(username, password);
-
             Long trainingTypeId = null;
             if (trainingType != null && !trainingType.isEmpty()) {
-                Optional<TrainingType> typeOpt = trainingTypeDAO.findByName(trainingType); // Assumes findByName exists
+                Optional<TrainingType> typeOpt = trainingTypeDAO.findByName(trainingType);
                 if (typeOpt.isPresent()) {
                     trainingTypeId = typeOpt.get().getId();
                 } else {
@@ -60,7 +71,7 @@ public class TrainingController {
                 }
             }
 
-            List<Training> trainings = trainingService.getTraineeTrainings(credentials, periodFrom, periodTo, trainerName, trainingTypeId);
+            List<Training> trainings = trainingService.getTraineeTrainings(credentials, periodFrom, periodTo, trainerUsername, trainingTypeId);
 
             List<TraineeTrainingResponse> response = trainings.stream().map(t -> new TraineeTrainingResponse(
                     t.getTrainingName(),
@@ -73,21 +84,26 @@ public class TrainingController {
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             logger.error("Failed to get trainee trainings for user {}: {}", username, e.getMessage());
-            return ResponseEntity.status(401).build(); // Likely an auth failure
+            return ResponseEntity.status(401).build();
         }
     }
 
+    @Operation(summary = "Get a trainer's training sessions", description = "Retrieves a list of trainings for a specific trainer, with optional filters. Requires user credentials for authentication.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Successfully retrieved trainings list"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized - Authentication failure")
+    })
     @GetMapping("/trainer")
     public ResponseEntity<List<TrainerTrainingResponse>> getTrainerTrainings(
-            @RequestParam String username,
-            @RequestParam String password,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Date periodFrom,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Date periodTo,
-            @RequestParam(required = false) String traineeName) {
+            @Parameter(description = "Username of the trainer", required = true) @RequestParam String username,
+            @Parameter(description = "Password of the trainer (for authentication)", required = true) @RequestParam String password,
+            @Parameter(description = "Filter trainings from this date onwards (YYYY-MM-DD)") @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Date periodFrom,
+            @Parameter(description = "Filter trainings up to this date (YYYY-MM-DD)") @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Date periodTo,
+            @Parameter(description = "Filter by trainee's username") @RequestParam(required = false) String traineeUsername) {
 
         try {
             Credentials credentials = new Credentials(username, password);
-            List<Training> trainings = trainingService.getTrainerTrainings(credentials, periodFrom, periodTo, traineeName);
+            List<Training> trainings = trainingService.getTrainerTrainings(credentials, periodFrom, periodTo, traineeUsername);
 
             List<TrainerTrainingResponse> response = trainings.stream().map(t -> new TrainerTrainingResponse(
                     t.getTrainingName(),
@@ -104,6 +120,11 @@ public class TrainingController {
         }
     }
 
+    @Operation(summary = "Add a new training session", description = "Creates a new training record for a trainee with a trainer.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Training created successfully"),
+            @ApiResponse(responseCode = "400", description = "Bad Request - Invalid data, or user/type not found")
+    })
     @PostMapping
     public ResponseEntity<Void> addTraining(@RequestBody AddTrainingRequest request) {
         try {
@@ -128,6 +149,10 @@ public class TrainingController {
         }
     }
 
+    @Operation(summary = "Get all available training types", description = "Retrieves a list of all training types in the system.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Successfully retrieved training types")
+    })
     @GetMapping("/types")
     public ResponseEntity<List<TrainingTypeResponse>> getTrainingTypes() {
         List<TrainingType> types = trainingTypeService.getAll();
