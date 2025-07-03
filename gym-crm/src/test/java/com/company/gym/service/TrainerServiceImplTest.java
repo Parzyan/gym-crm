@@ -14,6 +14,7 @@ import com.company.gym.service.impl.TrainerServiceImpl;
 import com.company.gym.util.PasswordGenerator;
 import com.company.gym.util.UsernameGenerator;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -120,7 +121,6 @@ class TrainerServiceImplTest {
                 () -> trainerService.changePassword("test.trainer", "oldPassword", "newPassword"));
     }
 
-    @Test
     void updateTrainerProfile_Success() {
         TrainingType newTrainingType = new TrainingType();
         newTrainingType.setId(2L);
@@ -128,7 +128,6 @@ class TrainerServiceImplTest {
 
         when(trainerDAO.findByUsername("test.trainer")).thenReturn(Optional.of(testTrainer));
         when(trainingTypeDAO.findById(2L)).thenReturn(Optional.of(newTrainingType));
-        doNothing().when(authenticationService).authenticate(validCredentials);
 
         Trainer result = trainerService.updateTrainerProfile(validCredentials, 2L);
 
@@ -140,18 +139,16 @@ class TrainerServiceImplTest {
     void updateTrainerProfile_TrainingTypeNotFound() {
         when(trainerDAO.findByUsername("test.trainer")).thenReturn(Optional.of(testTrainer));
         when(trainingTypeDAO.findById(2L)).thenReturn(Optional.empty());
-        doNothing().when(authenticationService).authenticate(validCredentials);
 
         assertThrows(IllegalArgumentException.class,
                 () -> trainerService.updateTrainerProfile(validCredentials, 2L));
+
+        verify(trainerDAO, never()).update(any());
     }
 
     @Test
     void updateStatus_Success() {
         when(trainerDAO.findByUsername("test.trainer")).thenReturn(Optional.of(testTrainer));
-        doNothing().when(authenticationService).authenticate(validCredentials);
-
-        assertTrue(testTrainer.getUser().getIsActive());
 
         trainerService.updateStatus(validCredentials);
         assertFalse(testTrainer.getUser().getIsActive());

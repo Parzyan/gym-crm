@@ -9,7 +9,6 @@ import com.company.gym.entity.Credentials;
 import com.company.gym.entity.Trainer;
 import com.company.gym.entity.Training;
 import com.company.gym.exception.InvalidCredentialsException;
-import com.company.gym.service.AuthenticationService;
 import com.company.gym.service.TrainerService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,7 +17,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -31,16 +29,14 @@ import java.util.stream.Collectors;
 @Tag(name = "Trainer Management", description = "Endpoints for creating, updating, and retrieving trainer data")
 @RestController
 @RequestMapping("/trainers")
-public class TrainerRestController {
+public class TrainerController {
 
-    private static final Logger logger = LoggerFactory.getLogger(TrainerRestController.class);
+    private static final Logger logger = LoggerFactory.getLogger(TrainerController.class);
     private final TrainerService trainerService;
-    private final AuthenticationService authenticationService;
 
     @Autowired
-    public TrainerRestController(TrainerService trainerService, AuthenticationService authenticationService) {
+    public TrainerController(TrainerService trainerService) {
         this.trainerService = trainerService;
-        this.authenticationService = authenticationService;
     }
 
     @Operation(summary = "Register a new trainer", description = "Creates a new trainer profile and returns their generated credentials.")
@@ -66,69 +62,55 @@ public class TrainerRestController {
         }
     }
 
-    @Operation(summary = "Get a trainer's profile", description = "Retrieves the full profile details for a single trainer by their username. Requires credentials for authentication.")
+    @Operation(summary = "Get a trainer's profile", description = "Retrieves the full profile details for a single trainer by their username.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Successfully retrieved trainer profile",
                     content = @Content(schema = @Schema(implementation = TrainerProfileResponse.class))),
-            @ApiResponse(responseCode = "401", description = "Unauthorized - Invalid credentials provided"),
-            @ApiResponse(responseCode = "500", description = "Internal Server Error - Authenticated user not found in database")
+            @ApiResponse(responseCode = "404", description = "Not Found - Trainer does not exist"),
+            @ApiResponse(responseCode = "500", description = "Internal Server Error")
     })
     @GetMapping("/profile")
     public ResponseEntity<TrainerProfileResponse> getTrainerProfile(
-            @Parameter(description = "Username of the trainer to retrieve", required = true) @RequestParam String username,
-            @Parameter(description = "Password of the trainer (for authentication)", required = true) @RequestParam String password) {
-
+            @RequestAttribute("authenticatedUsername") String username) {
         try {
-            authenticationService.authenticate(new Credentials(username, password));
-
             Trainer trainer = trainerService.getByUsername(username)
-                    .orElseThrow(() -> new IllegalStateException("Authenticated user not found in database: " + username));
+                    .orElseThrow(() -> new IllegalStateException("Trainer not found in database: " + username));
 
             return ResponseEntity.ok(mapTrainerToProfileResponse(trainer));
-
-        } catch (InvalidCredentialsException e) {
-            logger.warn("Get profile failed for user '{}' due to invalid credentials.", username);
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         } catch (IllegalStateException e) {
-            logger.error("Data consistency error: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            logger.error("Error retrieving trainer profile: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
     }
 
-    @Operation(summary = "Update a trainer's profile", description = "Updates the profile information for an existing trainer. Note that the service layer for this operation only supports updating the 'isActive' status. First name, last name, and specialization are ignored.")
+    @Operation(summary = "Update a trainer's profile", description = "Updates the profile information for an existing trainer.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Successfully updated trainer profile",
                     content = @Content(schema = @Schema(implementation = TrainerProfileResponse.class))),
-            @ApiResponse(responseCode = "401", description = "Unauthorized - Authentication failure"),
             @ApiResponse(responseCode = "404", description = "Not Found - Trainer does not exist"),
             @ApiResponse(responseCode = "500", description = "Internal Server Error")
     })
     @PutMapping("/profile")
-    public ResponseEntity<TrainerProfileResponse> updateTrainerProfile(@RequestBody UpdateTrainerProfileRequest request) {
+    public ResponseEntity<TrainerProfileResponse> updateTrainerProfile(
+            @RequestAttribute("authenticatedUsername") String username,
+            @RequestBody UpdateTrainerProfileRequest request) {
         try {
-            Trainer currentTrainer = trainerService.getByUsername(request.getUsername())
+            Trainer currentTrainer = trainerService.getByUsername(username)
                     .orElseThrow(() -> new IllegalArgumentException("Trainer not found"));
 
             if (currentTrainer.getUser().getIsActive() != request.isActive()) {
-                Credentials credentials = new Credentials(request.getUsername(), request.getPassword());
-                trainerService.updateStatus(credentials);
+                trainerService.updateStatus(new Credentials(username, null));
             }
 
-            Trainer updatedTrainer = trainerService.getByUsername(request.getUsername()).get();
+            Trainer updatedTrainer = trainerService.getByUsername(username).get();
             TrainerProfileResponse response = mapTrainerToProfileResponse(updatedTrainer);
 
-            logger.info("Successfully processed update for trainer profile: {}", request.getUsername());
+            logger.info("Successfully updated trainer profile: {}", username);
             return ResponseEntity.ok(response);
 
-        } catch (InvalidCredentialsException e) {
-            logger.error("Update profile failed for user '{}' due to invalid credentials.", request.getUsername());
-            return ResponseEntity.status(401).build();
         } catch (IllegalArgumentException e) {
-            logger.error("Update profile failed for {}: {}", request.getUsername(), e.getMessage());
-            return ResponseEntity.notFound().build();
-        } catch (Exception e) {
-            logger.error("An unexpected error occurred updating trainer {}", request.getUsername(), e);
-            return ResponseEntity.status(500).build();
+            logger.error("Update profile failed: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
     }
 

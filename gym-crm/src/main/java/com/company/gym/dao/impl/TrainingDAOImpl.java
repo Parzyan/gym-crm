@@ -119,4 +119,15 @@ public class TrainingDAOImpl implements TrainingDAO {
             query.setParameter("traineeUsername", traineeUsername);
         }
     }
+
+    @Override
+    public void update(Training training) {
+        try {
+            entityManager.merge(training);
+            logger.debug("Updated training with ID: {}", training.getId());
+        } catch (Exception e) {
+            logger.error("Error updating trainee with ID: {}", training.getId(), e);
+            throw new DAOException("Error updating trainee", e);
+        }
+    }
 }

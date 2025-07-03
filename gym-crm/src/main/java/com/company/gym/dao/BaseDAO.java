@@ -7,4 +7,5 @@ public interface BaseDAO<T> {
     void save(T obj);
     Optional<T> findById(Long id);
     List<T> findAll();
+    void update(T entity);
 }

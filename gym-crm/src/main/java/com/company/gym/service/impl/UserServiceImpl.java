@@ -1,12 +1,15 @@
 package com.company.gym.service.impl;
 
 import com.company.gym.dao.impl.UserDAOImpl;
+import com.company.gym.entity.User;
 import com.company.gym.service.UserService;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import java.util.Optional;
 
 @Service
 @Transactional
@@ -33,5 +36,10 @@ public class UserServiceImpl implements UserService {
             logger.error("Error checking username existence: {}", username, e);
             throw new RuntimeException("Error checking username existence", e);
         }
+    }
+
+    @Override
+    public Optional<User> getByUsername(String username) {
+        return userDAO.findByUsername(username);
     }
 }

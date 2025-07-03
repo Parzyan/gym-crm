@@ -3,6 +3,7 @@ package com.company.gym.service.impl;
 import com.company.gym.dao.impl.UserDAOImpl;
 import com.company.gym.entity.Credentials;
 import com.company.gym.entity.User;
+import com.company.gym.exception.InactiveUserException;
 import com.company.gym.exception.InvalidCredentialsException;
 import com.company.gym.service.AuthenticationService;
 import org.slf4j.Logger;
@@ -28,9 +29,8 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                     logger.warn("Authentication failed - user not found: {}", credentials.getUsername());
                     return new InvalidCredentialsException("Invalid username or password");
                 });
-        if (!user.getPassword().equals(credentials.getPassword())) {
-            logger.warn("Authentication failed - incorrect password for user: {}", credentials.getUsername());
-            throw new InvalidCredentialsException("Invalid username or password");
+        if(!user.getIsActive()) {
+            throw new InactiveUserException("User is not active");
         }
     }
 }

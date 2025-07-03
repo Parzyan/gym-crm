@@ -14,10 +14,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -44,23 +44,20 @@ public class TrainingController {
         this.trainingTypeService = trainingTypeService;
     }
 
-    @Operation(summary = "Get a trainee's training sessions", description = "Retrieves a list of trainings for a specific trainee, with optional filters. Requires user credentials for authentication.")
+    @Operation(summary = "Get a trainee's training sessions", description = "Retrieves a list of trainings for a specific trainee, with optional filters.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Successfully retrieved trainings list"),
-            @ApiResponse(responseCode = "400", description = "Bad Request - Invalid training type provided"),
-            @ApiResponse(responseCode = "401", description = "Unauthorized - Authentication failure")
+            @ApiResponse(responseCode = "400", description = "Bad Request - Invalid training type provided")
     })
     @GetMapping("/trainee")
     public ResponseEntity<List<TraineeTrainingResponse>> getTraineeTrainings(
-            @Parameter(description = "Username of the trainee", required = true) @RequestParam String username,
-            @Parameter(description = "Password of the trainee (for authentication)", required = true) @RequestParam String password,
-            @Parameter(description = "Filter trainings from this date onwards (YYYY-MM-DD)") @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Date periodFrom,
-            @Parameter(description = "Filter trainings up to this date (YYYY-MM-DD)") @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Date periodTo,
-            @Parameter(description = "Filter by trainer's username") @RequestParam(required = false) String trainerUsername,
-            @Parameter(description = "Filter by training type name (e.g., 'Cardio')") @RequestParam(required = false) String trainingType) {
+            @RequestAttribute("authenticatedUsername") String username,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Date periodFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Date periodTo,
+            @RequestParam(required = false) String trainerUsername,
+            @RequestParam(required = false) String trainingType) {
 
         try {
-            Credentials credentials = new Credentials(username, password);
             Long trainingTypeId = null;
             if (trainingType != null && !trainingType.isEmpty()) {
                 Optional<TrainingType> typeOpt = trainingTypeDAO.findByName(trainingType);
@@ -71,7 +68,8 @@ public class TrainingController {
                 }
             }
 
-            List<Training> trainings = trainingService.getTraineeTrainings(credentials, periodFrom, periodTo, trainerUsername, trainingTypeId);
+            List<Training> trainings = trainingService.getTraineeTrainings(
+                    new Credentials(username, null), periodFrom, periodTo, trainerUsername, trainingTypeId);
 
             List<TraineeTrainingResponse> response = trainings.stream().map(t -> new TraineeTrainingResponse(
                     t.getTrainingName(),
@@ -84,26 +82,24 @@ public class TrainingController {
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             logger.error("Failed to get trainee trainings for user {}: {}", username, e.getMessage());
-            return ResponseEntity.status(401).build();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
-    @Operation(summary = "Get a trainer's training sessions", description = "Retrieves a list of trainings for a specific trainer, with optional filters. Requires user credentials for authentication.")
+    @Operation(summary = "Get a trainer's training sessions", description = "Retrieves a list of trainings for a specific trainer, with optional filters.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully retrieved trainings list"),
-            @ApiResponse(responseCode = "401", description = "Unauthorized - Authentication failure")
+            @ApiResponse(responseCode = "200", description = "Successfully retrieved trainings list")
     })
     @GetMapping("/trainer")
     public ResponseEntity<List<TrainerTrainingResponse>> getTrainerTrainings(
-            @Parameter(description = "Username of the trainer", required = true) @RequestParam String username,
-            @Parameter(description = "Password of the trainer (for authentication)", required = true) @RequestParam String password,
-            @Parameter(description = "Filter trainings from this date onwards (YYYY-MM-DD)") @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Date periodFrom,
-            @Parameter(description = "Filter trainings up to this date (YYYY-MM-DD)") @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Date periodTo,
-            @Parameter(description = "Filter by trainee's username") @RequestParam(required = false) String traineeUsername) {
+            @RequestAttribute("authenticatedUsername") String username,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Date periodFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Date periodTo,
+            @RequestParam(required = false) String traineeUsername) {
 
         try {
-            Credentials credentials = new Credentials(username, password);
-            List<Training> trainings = trainingService.getTrainerTrainings(credentials, periodFrom, periodTo, traineeUsername);
+            List<Training> trainings = trainingService.getTrainerTrainings(
+                    new Credentials(username, null), periodFrom, periodTo, traineeUsername);
 
             List<TrainerTrainingResponse> response = trainings.stream().map(t -> new TrainerTrainingResponse(
                     t.getTrainingName(),
@@ -116,7 +112,7 @@ public class TrainingController {
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             logger.error("Failed to get trainer trainings for user {}: {}", username, e.getMessage());
-            return ResponseEntity.status(401).build();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 

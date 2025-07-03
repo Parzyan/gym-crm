@@ -6,7 +6,6 @@ import com.company.gym.dto.response.TraineeTrainingResponse;
 import com.company.gym.dto.response.TrainerTrainingResponse;
 import com.company.gym.dto.response.TrainingTypeResponse;
 import com.company.gym.entity.*;
-import com.company.gym.exception.InvalidCredentialsException;
 import com.company.gym.service.TrainingService;
 import com.company.gym.service.TrainingTypeService;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,7 +25,6 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -50,120 +48,121 @@ class TrainingControllerTest {
 
     @BeforeEach
     void setUp() {
+        // Setup test training type
+        testTrainingType = new TrainingType();
+        testTrainingType.setId(1L);
+        testTrainingType.setTrainingTypeName("Cardio");
+
+        // Setup test training
+        Trainee testTrainee = new Trainee();
         User traineeUser = new User();
+        traineeUser.setUsername("john.doe");
         traineeUser.setFirstName("John");
         traineeUser.setLastName("Doe");
-
-        User trainerUser = new User();
-        trainerUser.setFirstName("Jane");
-        trainerUser.setLastName("Trainer");
-
-        Trainee testTrainee = new Trainee();
         testTrainee.setUser(traineeUser);
 
         Trainer testTrainer = new Trainer();
+        User trainerUser = new User();
+        trainerUser.setUsername("jane.trainer");
+        trainerUser.setFirstName("Jane");
+        trainerUser.setLastName("Trainer");
         testTrainer.setUser(trainerUser);
 
-        testTrainingType = new TrainingType();
-        testTrainingType.setId(1L);
-        testTrainingType.setTrainingTypeName("CrossFit");
-
         testTraining = new Training();
-        testTraining.setTrainingName("Morning WOD");
+        testTraining.setId(1L);
+        testTraining.setTrainingName("Morning Session");
         testTraining.setTrainingDate(new Date());
+        testTraining.setTrainingType(testTrainingType);
         testTraining.setDuration(60);
         testTraining.setTrainee(testTrainee);
         testTraining.setTrainer(testTrainer);
-        testTraining.setTrainingType(testTrainingType);
 
         addTrainingRequest = new AddTrainingRequest();
         addTrainingRequest.setTraineeUsername("john.doe");
-        addTrainingRequest.setTraineePassword("pass");
+        addTrainingRequest.setTraineePassword("password123");
         addTrainingRequest.setTrainerUsername("jane.trainer");
-        addTrainingRequest.setTrainerPassword("pass");
-        addTrainingRequest.setTrainingName("Morning WOD");
-        addTrainingRequest.setTrainingTypeName("CrossFit");
+        addTrainingRequest.setTrainerPassword("trainer123");
+        addTrainingRequest.setTrainingName("Morning Session");
+        addTrainingRequest.setTrainingTypeName("Cardio");
         addTrainingRequest.setTrainingDate(new Date());
         addTrainingRequest.setTrainingDuration(60);
     }
 
     @Test
-    @DisplayName("Get Trainee Trainings should return 200 OK with list on success")
+    @DisplayName("Get Trainee Trainings should return 200 OK with filtered results")
     void getTraineeTrainings_onSuccess() {
-        when(trainingService.getTraineeTrainings(any(), any(), any(), any(), any())).thenReturn(Collections.singletonList(testTraining));
+        when(trainingService.getTraineeTrainings(any(Credentials.class), any(), any(), any(), any()))
+                .thenReturn(Collections.singletonList(testTraining));
+        when(trainingTypeDAO.findByName(any())).thenReturn(Optional.of(testTrainingType));
 
         ResponseEntity<List<TraineeTrainingResponse>> response = trainingController.getTraineeTrainings(
-                "john.doe", "password", null, null, null, null);
+                "john.doe", null, null, null, "Cardio");
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
         assertEquals(1, response.getBody().size());
-        assertEquals("Morning WOD", response.getBody().getFirst().getTrainingName());
-        assertEquals("Jane Trainer", response.getBody().getFirst().getTrainerName());
+        assertEquals("Morning Session", response.getBody().getFirst().getTrainingName());
     }
 
     @Test
-    @DisplayName("Get Trainee Trainings should return 401 on service exception")
-    void getTraineeTrainings_onAuthFailure() {
-        when(trainingService.getTraineeTrainings(any(), any(), any(), any(), any())).thenThrow(new InvalidCredentialsException("Auth failed"));
+    @DisplayName("Get Trainee Trainings should return 400 for invalid training type")
+    void getTraineeTrainings_invalidTrainingType() {
+        when(trainingTypeDAO.findByName("InvalidType")).thenReturn(Optional.empty());
 
         ResponseEntity<List<TraineeTrainingResponse>> response = trainingController.getTraineeTrainings(
-                "john.doe", "wrong_password", null, null, null, null);
-
-        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
-    }
-
-    @Test
-    @DisplayName("Get Trainee Trainings should return 400 if Training Type is invalid")
-    void getTraineeTrainings_withInvalidTrainingType() {
-        when(trainingTypeDAO.findByName("NonExistentType")).thenReturn(Optional.empty());
-
-        ResponseEntity<List<TraineeTrainingResponse>> response = trainingController.getTraineeTrainings(
-                "john.doe", "password", null, null, null, "NonExistentType");
+                "john.doe", null, null, null, "InvalidType");
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
     }
 
     @Test
-    @DisplayName("Get Trainer Trainings should return 200 OK with list on success")
+    @DisplayName("Get Trainer Trainings should return 200 OK with filtered results")
     void getTrainerTrainings_onSuccess() {
-        when(trainingService.getTrainerTrainings(any(), any(), any(), any())).thenReturn(Collections.singletonList(testTraining));
+        when(trainingService.getTrainerTrainings(any(Credentials.class), any(), any(), any()))
+                .thenReturn(Collections.singletonList(testTraining));
 
         ResponseEntity<List<TrainerTrainingResponse>> response = trainingController.getTrainerTrainings(
-                "jane.trainer", "password", null, null, null);
+                "jane.trainer", null, null, null);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
         assertEquals(1, response.getBody().size());
-        assertEquals("Morning WOD", response.getBody().getFirst().getTrainingName());
-        assertEquals("John Doe", response.getBody().getFirst().getTraineeName());
+        assertEquals("Morning Session", response.getBody().getFirst().getTrainingName());
     }
 
     @Test
     @DisplayName("Add Training should return 200 OK on success")
     void addTraining_onSuccess() {
-        when(trainingTypeDAO.findByName("CrossFit")).thenReturn(Optional.of(testTrainingType));
-        when(trainingService.createTraining(any(), any(), anyString(), anyLong(), any(), anyInt())).thenReturn(testTraining);
+        when(trainingTypeDAO.findByName("Cardio")).thenReturn(Optional.of(testTrainingType));
+        when(trainingService.createTraining(any(), any(), any(), any(), any(), any()))
+                .thenReturn(testTraining);
 
         ResponseEntity<Void> response = trainingController.addTraining(addTrainingRequest);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        verify(trainingService, times(1)).createTraining(any(), any(), anyString(), eq(1L), any(), anyInt());
+        verify(trainingService, times(1)).createTraining(
+                any(Credentials.class),
+                any(Credentials.class),
+                eq("Morning Session"),
+                eq(1L),
+                any(Date.class),
+                eq(60)
+        );
     }
 
     @Test
-    @DisplayName("Add Training should return 400 Bad Request if Training Type not found")
-    void addTraining_whenTrainingTypeNotFound() {
-        when(trainingTypeDAO.findByName(anyString())).thenReturn(Optional.empty());
+    @DisplayName("Add Training should return 400 for invalid training type")
+    void addTraining_invalidTrainingType() {
+        when(trainingTypeDAO.findByName("InvalidType")).thenReturn(Optional.empty());
 
         ResponseEntity<Void> response = trainingController.addTraining(addTrainingRequest);
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
-        verify(trainingService, never()).createTraining(any(), any(), anyString(), anyLong(), any(), anyInt());
+        verify(trainingService, never()).createTraining(any(), any(), any(), any(), any(), any());
     }
 
     @Test
-    @DisplayName("Get Training Types should return 200 OK with list")
+    @DisplayName("Get Training Types should return 200 OK with all types")
     void getTrainingTypes_onSuccess() {
         when(trainingTypeService.getAll()).thenReturn(Collections.singletonList(testTrainingType));
 
@@ -172,7 +171,6 @@ class TrainingControllerTest {
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
         assertEquals(1, response.getBody().size());
-        assertEquals("CrossFit", response.getBody().getFirst().getName());
-        assertEquals(1L, response.getBody().getFirst().getId());
+        assertEquals("Cardio", response.getBody().getFirst().getName());
     }
 }

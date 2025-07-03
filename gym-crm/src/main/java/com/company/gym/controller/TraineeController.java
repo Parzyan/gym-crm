@@ -9,10 +9,13 @@ import com.company.gym.entity.Credentials;
 import com.company.gym.entity.Trainee;
 import com.company.gym.entity.Trainer;
 import com.company.gym.entity.Training;
+import com.company.gym.exception.EntityNotFoundException;
 import com.company.gym.exception.InvalidCredentialsException;
-import com.company.gym.service.AuthenticationService;
+import com.company.gym.exception.InvalidInputException;
+import com.company.gym.exception.ServiceException;
 import com.company.gym.service.TraineeService;
 import com.company.gym.service.TrainerService;
+import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,7 +23,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -33,18 +35,16 @@ import java.util.stream.Collectors;
 @Tag(name = "Trainee Management", description = "Endpoints for creating, updating, and retrieving trainee data")
 @RestController
 @RequestMapping("/trainees")
-public class TraineeRestController {
-    private static final Logger logger = LoggerFactory.getLogger(TraineeRestController.class);
+public class TraineeController {
+    private static final Logger logger = LoggerFactory.getLogger(TraineeController.class);
 
     private final TraineeService traineeService;
     private final TrainerService trainerService;
-    private final AuthenticationService authenticationService;
 
     @Autowired
-    public TraineeRestController(TraineeService traineeService, TrainerService trainerService, AuthenticationService authenticationService) {
+    public TraineeController(TraineeService traineeService, TrainerService trainerService) {
         this.traineeService = traineeService;
         this.trainerService = trainerService;
-        this.authenticationService = authenticationService;
     }
 
     @Operation(summary = "Register a new trainee", description = "Creates a new trainee profile and returns their generated credentials.")
@@ -55,7 +55,7 @@ public class TraineeRestController {
             @ApiResponse(responseCode = "500", description = "Internal Server Error")
     })
     @PostMapping("/register")
-    public ResponseEntity<UserCredentialsResponse> registerTrainee(@RequestBody TraineeRegistrationRequest request) {
+    public ResponseEntity<UserCredentialsResponse> registerTrainee(@Valid @RequestBody TraineeRegistrationRequest request) {
         try {
             Trainee newTrainee = traineeService.createTraineeProfile(
                     request.getFirstName(),
@@ -72,41 +72,35 @@ public class TraineeRestController {
             logger.info("Successfully registered trainee. Username: {}", response.getUsername());
             return new ResponseEntity<>(response, HttpStatus.CREATED);
 
-        } catch (IllegalArgumentException e) {
-            logger.error("Registration failed: First name or last name was null.", e);
+        } catch (InvalidInputException e) {
+            logger.error("Registration failed: {}", e.getMessage());
             return ResponseEntity.badRequest().build();
-        } catch (Exception e) {
-            logger.error("An unexpected error occurred during trainee registration.", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        } catch (ServiceException e) {
+            logger.error("Service error during trainee registration: {}", e.getMessage());
+            return ResponseEntity.internalServerError().build();
         }
     }
 
-    @Operation(summary = "Get a trainee's profile", description = "Retrieves the full profile details for a single trainee by their username. Requires credentials for authentication.")
+    @Operation(summary = "Get a trainee's profile", description = "Retrieves the full profile details for a single trainee by their username.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Successfully retrieved trainee profile",
                     content = @Content(schema = @Schema(implementation = TraineeProfileResponse.class))),
-            @ApiResponse(responseCode = "401", description = "Unauthorized - Invalid credentials provided"),
-            @ApiResponse(responseCode = "500", description = "Internal Server Error - Authenticated user not found in database")
+            @ApiResponse(responseCode = "404", description = "Not Found - Trainee not found"),
+            @ApiResponse(responseCode = "500", description = "Internal Server Error")
     })
     @GetMapping("/profile")
     public ResponseEntity<TraineeProfileResponse> getTraineeProfile(
-            @Parameter(description = "Username of the trainee to retrieve", required = true) @RequestParam String username,
-            @Parameter(description = "Password of the trainee (for authentication)", required = true) @RequestParam String password) {
-
+            @RequestAttribute("authenticatedUsername") String username) {
         try {
-            authenticationService.authenticate(new Credentials(username, password));
-
             Trainee trainee = traineeService.getByUsername(username)
-                    .orElseThrow(() -> new IllegalStateException("Authenticated user not found in database: " + username));
-
+                    .orElseThrow(() -> new EntityNotFoundException("Trainee", username));
             return ResponseEntity.ok(mapTraineeToProfileResponse(trainee));
-
-        } catch (InvalidCredentialsException e) {
-            logger.warn("Get profile failed for user '{}' due to invalid credentials.", username);
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        } catch (IllegalStateException e) {
-            logger.error("Data consistency error: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        } catch (EntityNotFoundException e) {
+            logger.warn("Trainee not found: {}", username);
+            return ResponseEntity.notFound().build();
+        } catch (ServiceException e) {
+            logger.error("Service error while fetching trainee profile: {}", e.getMessage());
+            return ResponseEntity.internalServerError().build();
         }
     }
 
@@ -114,71 +108,68 @@ public class TraineeRestController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Successfully updated trainee profile",
                     content = @Content(schema = @Schema(implementation = TraineeProfileResponse.class))),
-            @ApiResponse(responseCode = "401", description = "Unauthorized - Authentication failure"),
+            @ApiResponse(responseCode = "400", description = "Bad Request - Invalid input data"),
             @ApiResponse(responseCode = "404", description = "Not Found - Trainee does not exist")
     })
     @PutMapping("/profile")
-    public ResponseEntity<TraineeProfileResponse> updateTraineeProfile(@RequestBody UpdateTraineeProfileRequest request) {
+    public ResponseEntity<TraineeProfileResponse> updateTraineeProfile(
+            @RequestAttribute("authenticatedUsername") String username,
+            @Valid @RequestBody UpdateTraineeProfileRequest request) {
         try {
             Trainee updatedTrainee = traineeService.updateTraineeProfile(
-                    new Credentials(request.getUsername(), request.getPassword()),
+                    new Credentials(username, null),
                     request.getDateOfBirth(),
                     request.getAddress()
             );
 
             if (updatedTrainee.getUser().getIsActive() != request.isActive()) {
-                traineeService.updateStatus(new Credentials(request.getUsername(), request.getPassword()));
+                traineeService.updateStatus(new Credentials(username, null));
             }
 
-            Trainee finalTrainee = traineeService.getByUsername(request.getUsername()).get();
+            Trainee finalTrainee = traineeService.getByUsername(username)
+                    .orElseThrow(() -> new EntityNotFoundException("Trainee", username));
+
             TraineeProfileResponse response = mapTraineeToProfileResponse(finalTrainee);
 
-            logger.info("Successfully updated profile for trainee: {}", request.getUsername());
+            logger.info("Successfully updated profile for trainee: {}", username);
             return ResponseEntity.ok(response);
 
-        } catch (InvalidCredentialsException e) {
-            logger.warn("Update profile failed for '{}': {}", request.getUsername(), e.getMessage());
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        } catch (IllegalArgumentException e) {
-            logger.warn("Update profile failed because trainee '{}' was not found.", request.getUsername());
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        } catch (EntityNotFoundException e) {
+            logger.warn("Update profile failed: {}", e.getMessage());
+            return ResponseEntity.notFound().build();
+        } catch (InvalidInputException e) {
+            logger.warn("Invalid input for update profile: {}", e.getMessage());
+            return ResponseEntity.badRequest().build();
         }
     }
 
-    @Operation(summary = "Delete a trainee's profile", description = "Permanently deletes a trainee's profile. Requires credentials in the body for authentication.")
+    @Operation(summary = "Delete a trainee's profile", description = "Permanently deletes a trainee's profile.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Trainee profile deleted successfully"),
-            @ApiResponse(responseCode = "401", description = "Unauthorized - Invalid credentials"),
+            @ApiResponse(responseCode = "204", description = "Trainee profile deleted successfully"),
             @ApiResponse(responseCode = "404", description = "Not Found - Trainee does not exist")
     })
     @DeleteMapping("/profile")
-    public ResponseEntity<Void> deleteTraineeProfile(@RequestBody DeleteProfileRequest request) {
+    public ResponseEntity<Void> deleteTraineeProfile(
+            @RequestAttribute("authenticatedUsername") String username) {
         try {
-            traineeService.deleteTraineeProfile(new Credentials(request.getUsername(), request.getPassword()));
-            logger.info("Successfully deleted trainee profile: {}", request.getUsername());
-            return ResponseEntity.ok().build();
-        } catch (InvalidCredentialsException e) {
-            logger.warn("Delete profile failed for '{}': {}", request.getUsername(), e.getMessage());
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        } catch (IllegalArgumentException e) {
-            logger.warn("Delete profile failed because trainee '{}' was not found.", request.getUsername());
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+            traineeService.deleteTraineeProfile(new Credentials(username, null));
+            logger.info("Successfully deleted trainee profile: {}", username);
+            return ResponseEntity.noContent().build();
+        } catch (EntityNotFoundException e) {
+            logger.warn("Delete profile failed: {}", e.getMessage());
+            return ResponseEntity.notFound().build();
         }
     }
 
     @Operation(summary = "Get active trainers not assigned to a trainee", description = "Retrieves a list of trainers who are active and do not have any trainings with the specified trainee.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Successfully retrieved list of trainers"),
-            @ApiResponse(responseCode = "401", description = "Unauthorized - Invalid credentials"),
             @ApiResponse(responseCode = "404", description = "Not Found - Trainee does not exist")
     })
     @GetMapping("/unassigned-trainers")
     public ResponseEntity<List<UnassignedTrainerResponse>> getUnassignedTrainers(
-            @Parameter(description = "Username of the trainee", required = true) @RequestParam String username,
-            @Parameter(description = "Password of the trainee", required = true) @RequestParam String password) {
+            @RequestAttribute("authenticatedUsername") String username) {
         try {
-            authenticationService.authenticate(new Credentials(username, password));
-
             List<Trainer> unassignedTrainers = trainerService.getUnassignedTrainers(username);
 
             List<UnassignedTrainerResponse> response = unassignedTrainers.stream()
@@ -193,29 +184,31 @@ public class TraineeRestController {
 
             logger.info("Successfully fetched unassigned, active trainers for trainee: {}", username);
             return ResponseEntity.ok(response);
-        } catch (InvalidCredentialsException e) {
-            logger.warn("Failed for user '{}' due to invalid credentials.", username);
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
-        catch (Exception e) {
-            logger.error("Failed to get unassigned trainers for trainee {}: {}", username, e.getMessage());
+        } catch (EntityNotFoundException e) {
+            logger.warn("Trainee not found: {}", username);
             return ResponseEntity.notFound().build();
         }
     }
 
-    @Operation(summary = "Update a trainee's assigned trainers list", description = "Partially updates the trainer assigned to one or more specific trainings for a trainee.")
+    @Operation(summary = "Update a trainee's assigned trainer for a specific training", description = "Updates the trainer assigned to a specific training for a trainee and returns the updated list of all trainers who have trainings with that trainee.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully updated trainers list",
+            @ApiResponse(responseCode = "200", description = "Successfully updated trainer for the training",
                     content = @Content(schema = @Schema(implementation = UpdatedTrainersListResponse.class))),
-            @ApiResponse(responseCode = "400", description = "Bad Request - Invalid data or permissions issue")
+            @ApiResponse(responseCode = "400", description = "Bad Request - Invalid data or permissions issue"),
+            @ApiResponse(responseCode = "404", description = "Not Found - Trainee, training, or trainer not found")
     })
     @PatchMapping("/trainers")
-    public ResponseEntity<UpdatedTrainersListResponse> updateTrainers(
-            @RequestBody UpdateTraineeTrainersRequest request) {
+    public ResponseEntity<UpdatedTrainersListResponse> updateTrainerForTraining(
+            @RequestAttribute("authenticatedUsername") String username,
+            @Valid @RequestBody UpdateTrainerForTrainingRequest request) {
         try {
-            Credentials credentials = new Credentials(request.getTraineeUsername(), request.getTraineePassword());
+            traineeService.updateTrainerForTraining(
+                    new Credentials(username, null),
+                    request.getTrainingId(),
+                    request.getNewTrainerId()
+            );
 
-            List<Trainer> updatedTrainersList = traineeService.updateTrainingTrainers(credentials, request.getUpdates());
+            List<Trainer> updatedTrainersList = traineeService.getTrainersForTrainee(username);
 
             List<TraineeProfileResponse.TrainerInfo> trainerInfoList = updatedTrainersList.stream()
                     .map(trainer -> new TraineeProfileResponse.TrainerInfo(
@@ -223,11 +216,16 @@ public class TraineeRestController {
                             trainer.getUser().getFirstName(),
                             trainer.getUser().getLastName(),
                             trainer.getSpecialization().getTrainingTypeName()
-                    )).collect(Collectors.toList());
+                    ))
+                    .collect(Collectors.toList());
 
             return ResponseEntity.ok(new UpdatedTrainersListResponse(trainerInfoList));
-        } catch (Exception e) {
-            logger.error("Failed to update trainee's trainers for user {}: {}", request.getTraineeUsername(), e.getMessage());
+
+        } catch (EntityNotFoundException e) {
+            logger.warn("Entity not found: {}", e.getMessage());
+            return ResponseEntity.notFound().build();
+        } catch (InvalidInputException e) {
+            logger.warn("Invalid input: {}", e.getMessage());
             return ResponseEntity.badRequest().build();
         }
     }
@@ -266,6 +264,7 @@ public class TraineeRestController {
         response.setDateOfBirth(trainee.getDateOfBirth());
         response.setAddress(trainee.getAddress());
         response.setActive(trainee.getUser().getIsActive());
+
         List<TraineeProfileResponse.TrainerInfo> trainersFromTrainings = trainee.getTrainings()
                 .stream()
                 .map(Training::getTrainer)

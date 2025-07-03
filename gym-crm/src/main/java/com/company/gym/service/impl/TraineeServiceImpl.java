@@ -3,8 +3,8 @@ package com.company.gym.service.impl;
 import com.company.gym.dao.TrainingDAO;
 import com.company.gym.dao.impl.TraineeDAOImpl;
 import com.company.gym.dao.impl.TrainerDAOImpl;
-import com.company.gym.dto.request.UpdateTraineeTrainersRequest;
 import com.company.gym.entity.*;
+import com.company.gym.exception.EntityNotFoundException;
 import com.company.gym.service.AbstractUserService;
 import com.company.gym.service.TraineeService;
 import com.company.gym.util.PasswordGenerator;
@@ -176,26 +176,37 @@ public class TraineeServiceImpl extends AbstractUserService<Trainee> implements 
 
     @Override
     @Transactional
-    public List<Trainer> updateTrainingTrainers(Credentials credentials, List<UpdateTraineeTrainersRequest.TrainingTrainerUpdate> updates) {
+    public void updateTrainerForTraining(Credentials credentials, Long trainingId, Long newTrainerId) {
         validateCredentials(credentials);
 
-        Trainee currentTrainee = traineeDAO.findByUsername(credentials.getUsername())
-                .orElseThrow(() -> new IllegalArgumentException("Authenticated trainee not found"));
+        Training training = trainingDAO.findById(trainingId)
+                .orElseThrow(() -> new EntityNotFoundException("Training not found with ID: " + trainingId));
 
-        for (UpdateTraineeTrainersRequest.TrainingTrainerUpdate update : updates) {
-            Training training = trainingDAO.findById(update.getTrainingId())
-                    .orElseThrow(() -> new IllegalArgumentException("Training not found with ID: " + update.getTrainingId()));
+        Trainee authenticatedTrainee = traineeDAO.findByUsername(credentials.getUsername())
+                .orElseThrow(() -> new EntityNotFoundException("Trainee not found with username: " + credentials.getUsername()));
 
-            if (!training.getTrainee().getId().equals(currentTrainee.getId())) {
-                throw new SecurityException("Authenticated user does not have permission to update training with ID: " + update.getTrainingId());
-            }
-
-            Trainer newTrainer = trainerDAO.findByUsername(update.getTrainerUsername())
-                    .orElseThrow(() -> new IllegalArgumentException("Trainer not found with username: " + update.getTrainerUsername()));
-
-            training.setTrainer(newTrainer);
+        if (!training.getTrainee().getId().equals(authenticatedTrainee.getId())) {
+            throw new SecurityException("Authenticated trainee does not own this training");
         }
 
-        return new ArrayList<>(traineeDAO.findByUsername(credentials.getUsername()).get().getTrainers());
+        Trainer newTrainer = trainerDAO.findById(newTrainerId)
+                .orElseThrow(() -> new EntityNotFoundException("Trainer not found with ID: " + newTrainerId));
+
+        training.setTrainer(newTrainer);
+        trainingDAO.update(training);
+
+        logger.info("Updated trainer for training (ID: {}) to trainer (ID: {}) for trainee '{}'",
+                trainingId, newTrainerId, credentials.getUsername());
+    }
+
+    @Override
+    public List<Trainer> getTrainersForTrainee(String traineeUsername) {
+        Trainee trainee = traineeDAO.findByUsername(traineeUsername)
+                .orElseThrow(() -> new EntityNotFoundException("Trainee not found with username: " + traineeUsername));
+
+        return trainee.getTrainings().stream()
+                .map(Training::getTrainer)
+                .distinct()
+                .collect(Collectors.toList());
     }
 }

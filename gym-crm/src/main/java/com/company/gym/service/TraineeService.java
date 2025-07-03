@@ -1,6 +1,5 @@
 package com.company.gym.service;
 
-import com.company.gym.dto.request.UpdateTraineeTrainersRequest;
 import com.company.gym.entity.Credentials;
 import com.company.gym.entity.Trainee;
 import com.company.gym.entity.Trainer;
@@ -14,5 +13,6 @@ public interface TraineeService extends BaseUserService<Trainee> {
     Trainee updateTraineeProfile(Credentials credentials, Date dateOfBirth, String address);
     void deleteTraineeProfile(Credentials credentials);
     void updateTraineeTrainers(Credentials credentials, Set<Long> trainerIds);
-    List<Trainer> updateTrainingTrainers(Credentials credentials, List<UpdateTraineeTrainersRequest.TrainingTrainerUpdate> updates);
+    void updateTrainerForTraining(Credentials credentials, Long trainingId, Long newTrainerId);
+    List<Trainer> getTrainersForTrainee(String traineeUsername);
 }
