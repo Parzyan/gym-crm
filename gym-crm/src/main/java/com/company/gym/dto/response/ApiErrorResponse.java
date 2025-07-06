@@ -1,37 +1,16 @@
-package com.company.gym.exception;
+package com.company.gym.dto.response;
 
 import org.slf4j.MDC;
-import java.time.LocalDateTime;
 
 public class ApiErrorResponse {
-    private LocalDateTime timestamp;
-    private int status;
     private String error;
     private String message;
     private String transactionId;
 
-    public ApiErrorResponse(int status, String error, String message) {
-        this.timestamp = LocalDateTime.now();
-        this.status = status;
+    public ApiErrorResponse(String error, String message) {
         this.error = error;
         this.message = message;
         this.transactionId = MDC.get("transactionId");
-    }
-
-    public LocalDateTime getTimestamp() {
-        return timestamp;
-    }
-
-    public void setTimestamp(LocalDateTime timestamp) {
-        this.timestamp = timestamp;
-    }
-
-    public int getStatus() {
-        return status;
-    }
-
-    public void setStatus(int status) {
-        this.status = status;
     }
 
     public String getError() {

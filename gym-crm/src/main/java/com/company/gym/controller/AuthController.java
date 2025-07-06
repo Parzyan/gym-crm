@@ -2,10 +2,10 @@ package com.company.gym.controller;
 
 import com.company.gym.dto.request.ChangePasswordRequest;
 import com.company.gym.entity.Credentials;
-import com.company.gym.exception.InvalidCredentialsException;
 import com.company.gym.service.AuthenticationService;
 import com.company.gym.service.TraineeService;
 import com.company.gym.service.TrainerService;
+import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,14 +45,9 @@ public class AuthController {
     public ResponseEntity<Void> login(
             @Parameter(description = "The username of the user", required = true) @RequestParam String username,
             @Parameter(description = "The password of the user", required = true) @RequestParam String password) {
-        try {
-            authService.authenticate(new Credentials(username, password));
-            logger.info("Login successful for user: {}", username);
-            return ResponseEntity.ok().build();
-        } catch (InvalidCredentialsException e) {
-            logger.warn("Login failed for user {}: {}", username, e.getMessage());
-            return ResponseEntity.status(401).build();
-        }
+        authService.authenticate(new Credentials(username, password));
+        logger.info("Login successful for user: {}", username);
+        return ResponseEntity.ok().build();
     }
 
     @Operation(summary = "Change a user's login password", description = "Allows a user to change their password after providing the old one.")
@@ -61,21 +56,16 @@ public class AuthController {
             @ApiResponse(responseCode = "401", description = "Unauthorized - Incorrect old password or user not found")
     })
     @PutMapping("/change-password")
-    public ResponseEntity<Void> changePassword(@RequestBody ChangePasswordRequest request) {
+    public ResponseEntity<Void> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
         try {
             traineeService.changePassword(request.getUsername(), request.getOldPassword(), request.getNewPassword());
             logger.info("Password successfully changed for trainee: {}", request.getUsername());
-            return ResponseEntity.ok().build();
         } catch (SecurityException e) {
             logger.debug("Could not change password for user {} as a trainee. Trying as a trainer.", request.getUsername());
-            try {
-                trainerService.changePassword(request.getUsername(), request.getOldPassword(), request.getNewPassword());
-                logger.info("Password successfully changed for trainer: {}", request.getUsername());
-                return ResponseEntity.ok().build();
-            } catch (Exception finalException) {
-                logger.warn("Password change failed for user {}: {}", request.getUsername(), finalException.getMessage());
-                return ResponseEntity.status(401).build();
-            }
+
+            trainerService.changePassword(request.getUsername(), request.getOldPassword(), request.getNewPassword());
+            logger.info("Password successfully changed for trainer: {}", request.getUsername());
         }
+        return ResponseEntity.ok().build();
     }
 }

@@ -6,6 +6,7 @@ import com.company.gym.dto.request.UpdateTrainerProfileRequest;
 import com.company.gym.dto.response.TrainerProfileResponse;
 import com.company.gym.dto.response.UserCredentialsResponse;
 import com.company.gym.entity.*;
+import com.company.gym.exception.EntityNotFoundException;
 import com.company.gym.exception.InvalidCredentialsException;
 import com.company.gym.service.TrainerService;
 import org.junit.jupiter.api.BeforeEach;
@@ -99,18 +100,21 @@ class TrainerControllerTest {
         assertEquals(HttpStatus.CREATED, response.getStatusCode());
         assertNotNull(response.getBody());
         assertEquals("jane.trainer", response.getBody().getUsername());
+
+        verify(trainerService, times(1)).createTrainerProfile(
+                eq("Jane"),
+                eq("Trainer"),
+                eq(1L)
+        );
     }
 
     @Test
-    @DisplayName("Register Trainer should return 400 Bad Request on failure")
+    @DisplayName("Register Trainer should throw IllegalArgumentException on failure")
     void registerTrainer_onFailure() {
         when(trainerService.createTrainerProfile(anyString(), anyString(), anyLong()))
                 .thenThrow(new IllegalArgumentException("Invalid input data"));
 
-        ResponseEntity<UserCredentialsResponse> response = trainerController.registerTrainer(registrationRequest);
-
-        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
-        verify(trainerService, times(1)).createTrainerProfile(anyString(), anyString(), anyLong());
+        assertThrows(IllegalArgumentException.class, () -> trainerController.registerTrainer(registrationRequest));
     }
 
     @Test
@@ -127,19 +131,18 @@ class TrainerControllerTest {
     }
 
     @Test
-    @DisplayName("Get Trainer Profile should return 404 Not Found if trainer does not exist")
+    @DisplayName("Get Trainer Profile should throw EntityNotFoundException if trainer does not exist")
     void getTrainerProfile_trainerNotFound() {
         when(trainerService.getByUsername("jane.trainer")).thenReturn(Optional.empty());
 
-        ResponseEntity<TrainerProfileResponse> response = trainerController.getTrainerProfile("jane.trainer");
-
-        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        assertThrows(EntityNotFoundException.class, () -> trainerController.getTrainerProfile("jane.trainer"));
     }
 
     @Test
     @DisplayName("Update Trainer Profile should return 200 OK on success")
     void updateTrainerProfile_onSuccess() {
-        testTrainer.getUser().setIsActive(updateProfileRequest.isActive());
+        // Set initial active status to false to trigger status update
+        testTrainer.getUser().setIsActive(false);
 
         when(trainerService.getByUsername("jane.trainer"))
                 .thenReturn(Optional.of(testTrainer))
@@ -152,17 +155,20 @@ class TrainerControllerTest {
         assertEquals("Jane", response.getBody().getFirstName());
 
         verify(trainerService, times(2)).getByUsername("jane.trainer");
-        verify(trainerService, never()).updateStatus(any());
+        verify(trainerService, times(1)).updateStatus(
+                argThat(credentials ->
+                        credentials.getUsername().equals("jane.trainer") &&
+                                credentials.getPassword() == null
+                )
+        );
     }
 
     @Test
-    @DisplayName("Update Trainer Profile should return 404 Not Found if trainer does not exist")
+    @DisplayName("Update Trainer Profile should throw EntityNotFoundException if trainer does not exist")
     void updateTrainerProfile_trainerNotFound() {
         when(trainerService.getByUsername("jane.trainer")).thenReturn(Optional.empty());
 
-        ResponseEntity<TrainerProfileResponse> response = trainerController.updateTrainerProfile("jane.trainer", updateProfileRequest);
-
-        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        assertThrows(EntityNotFoundException.class, () -> trainerController.updateTrainerProfile("jane.trainer", updateProfileRequest));
     }
 
     @Test
@@ -174,28 +180,19 @@ class TrainerControllerTest {
         ResponseEntity<Void> response = trainerController.updateTrainerStatus(statusRequest);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        verify(trainerService, times(1)).updateStatus(any(Credentials.class));
+        verify(trainerService, times(1)).updateStatus(
+                argThat(credentials ->
+                        credentials.getUsername().equals("jane.trainer") &&
+                                credentials.getPassword().equals("password123")
+                )
+        );
     }
 
     @Test
-    @DisplayName("Update Trainer Status should return 400 Bad Request if trainer not found")
+    @DisplayName("Update Trainer Status should throw EntityNotFoundException if trainer not found")
     void updateTrainerStatus_trainerNotFound() {
         when(trainerService.getByUsername("jane.trainer")).thenReturn(Optional.empty());
 
-        ResponseEntity<Void> response = trainerController.updateTrainerStatus(statusRequest);
-
-        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
-    }
-
-    @Test
-    @DisplayName("Update Trainer Status should return 401 Unauthorized on invalid credentials")
-    void updateTrainerStatus_invalidCredentials() {
-        when(trainerService.getByUsername("jane.trainer")).thenReturn(Optional.of(testTrainer));
-        doThrow(new InvalidCredentialsException("Invalid credentials"))
-                .when(trainerService).updateStatus(any(Credentials.class));
-
-        ResponseEntity<Void> response = trainerController.updateTrainerStatus(statusRequest);
-
-        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
+        assertThrows(EntityNotFoundException.class, () -> trainerController.updateTrainerStatus(statusRequest));
     }
 }

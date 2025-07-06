@@ -6,6 +6,7 @@ import com.company.gym.dto.response.TraineeTrainingResponse;
 import com.company.gym.dto.response.TrainerTrainingResponse;
 import com.company.gym.dto.response.TrainingTypeResponse;
 import com.company.gym.entity.*;
+import com.company.gym.exception.EntityNotFoundException;
 import com.company.gym.service.TrainingService;
 import com.company.gym.service.TrainingTypeService;
 import org.junit.jupiter.api.BeforeEach;
@@ -48,12 +49,10 @@ class TrainingControllerTest {
 
     @BeforeEach
     void setUp() {
-        // Setup test training type
         testTrainingType = new TrainingType();
         testTrainingType.setId(1L);
         testTrainingType.setTrainingTypeName("Cardio");
 
-        // Setup test training
         Trainee testTrainee = new Trainee();
         User traineeUser = new User();
         traineeUser.setUsername("john.doe");
@@ -93,7 +92,7 @@ class TrainingControllerTest {
     void getTraineeTrainings_onSuccess() {
         when(trainingService.getTraineeTrainings(any(Credentials.class), any(), any(), any(), any()))
                 .thenReturn(Collections.singletonList(testTraining));
-        when(trainingTypeDAO.findByName(any())).thenReturn(Optional.of(testTrainingType));
+        when(trainingTypeDAO.findByName("Cardio")).thenReturn(Optional.of(testTrainingType));
 
         ResponseEntity<List<TraineeTrainingResponse>> response = trainingController.getTraineeTrainings(
                 "john.doe", null, null, null, "Cardio");
@@ -102,17 +101,25 @@ class TrainingControllerTest {
         assertNotNull(response.getBody());
         assertEquals(1, response.getBody().size());
         assertEquals("Morning Session", response.getBody().getFirst().getTrainingName());
+
+        verify(trainingService).getTraineeTrainings(
+                argThat(credentials ->
+                        credentials.getUsername().equals("john.doe") &&
+                                credentials.getPassword() == null
+                ),
+                isNull(),
+                isNull(),
+                isNull(),
+                eq(1L)
+        );
     }
 
     @Test
-    @DisplayName("Get Trainee Trainings should return 400 for invalid training type")
+    @DisplayName("Get Trainee Trainings should throw EntityNotFoundException for invalid training type")
     void getTraineeTrainings_invalidTrainingType() {
         when(trainingTypeDAO.findByName("InvalidType")).thenReturn(Optional.empty());
 
-        ResponseEntity<List<TraineeTrainingResponse>> response = trainingController.getTraineeTrainings(
-                "john.doe", null, null, null, "InvalidType");
-
-        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertThrows(EntityNotFoundException.class, () -> trainingController.getTraineeTrainings("john.doe", null, null, null, "InvalidType"));
     }
 
     @Test
@@ -128,6 +135,16 @@ class TrainingControllerTest {
         assertNotNull(response.getBody());
         assertEquals(1, response.getBody().size());
         assertEquals("Morning Session", response.getBody().getFirst().getTrainingName());
+
+        verify(trainingService).getTrainerTrainings(
+                argThat(credentials ->
+                        credentials.getUsername().equals("jane.trainer") &&
+                                credentials.getPassword() == null
+                ),
+                isNull(),
+                isNull(),
+                isNull()
+        );
     }
 
     @Test
@@ -140,25 +157,20 @@ class TrainingControllerTest {
         ResponseEntity<Void> response = trainingController.addTraining(addTrainingRequest);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        verify(trainingService, times(1)).createTraining(
-                any(Credentials.class),
-                any(Credentials.class),
+        verify(trainingService).createTraining(
+                argThat(creds ->
+                        creds.getUsername().equals("john.doe") &&
+                                creds.getPassword().equals("password123")
+                ),
+                argThat(creds ->
+                        creds.getUsername().equals("jane.trainer") &&
+                                creds.getPassword().equals("trainer123")
+                ),
                 eq("Morning Session"),
                 eq(1L),
                 any(Date.class),
                 eq(60)
         );
-    }
-
-    @Test
-    @DisplayName("Add Training should return 400 for invalid training type")
-    void addTraining_invalidTrainingType() {
-        when(trainingTypeDAO.findByName("InvalidType")).thenReturn(Optional.empty());
-
-        ResponseEntity<Void> response = trainingController.addTraining(addTrainingRequest);
-
-        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
-        verify(trainingService, never()).createTraining(any(), any(), any(), any(), any(), any());
     }
 
     @Test

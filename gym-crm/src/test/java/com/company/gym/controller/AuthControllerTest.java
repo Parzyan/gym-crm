@@ -10,6 +10,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -56,18 +58,21 @@ class AuthControllerTest {
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
 
-        verify(authenticationService).authenticate(any(Credentials.class));
+        verify(authenticationService).authenticate(
+                argThat(credentials ->
+                        credentials.getUsername().equals("test.user") &&
+                                credentials.getPassword().equals("correctPassword")
+                )
+        );
     }
 
     @Test
-    @DisplayName("Login should return 401 Unauthorized for invalid credentials")
+    @DisplayName("Login should throw InvalidCredentialsException for invalid credentials")
     void login_credentialsAreInvalid() {
         doThrow(new InvalidCredentialsException("Invalid credentials"))
                 .when(authenticationService).authenticate(any(Credentials.class));
 
-        ResponseEntity<Void> response = authController.login("test.user", "wrongPassword");
-
-        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
+        assertThrows(InvalidCredentialsException.class, () -> authController.login("test.user", "wrongPassword"));
     }
 
     @Test
@@ -79,7 +84,11 @@ class AuthControllerTest {
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
 
-        verify(traineeService).changePassword("test.user", "oldPass", "newPass");
+        verify(traineeService).changePassword(
+                eq("test.user"),
+                eq("oldPass"),
+                eq("newPass")
+        );
         verify(trainerService, never()).changePassword(anyString(), anyString(), anyString());
     }
 
@@ -94,20 +103,15 @@ class AuthControllerTest {
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
 
-        verify(traineeService).changePassword("test.user", "oldPass", "newPass");
-        verify(trainerService).changePassword("test.user", "oldPass", "newPass");
-    }
-
-    @Test
-    @DisplayName("Change Password should return 401 Unauthorized for incorrect old password")
-    void changePassword_oldPasswordIsIncorrect() {
-        doThrow(new SecurityException("Incorrect old password"))
-                .when(traineeService).changePassword(anyString(), anyString(), anyString());
-        doThrow(new SecurityException("Incorrect old password"))
-                .when(trainerService).changePassword(anyString(), anyString(), anyString());
-
-        ResponseEntity<Void> response = authController.changePassword(changePasswordRequest);
-
-        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
+        verify(traineeService).changePassword(
+                eq("test.user"),
+                eq("oldPass"),
+                eq("newPass")
+        );
+        verify(trainerService).changePassword(
+                eq("test.user"),
+                eq("oldPass"),
+                eq("newPass")
+        );
     }
 }

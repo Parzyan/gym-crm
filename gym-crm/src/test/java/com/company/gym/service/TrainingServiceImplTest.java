@@ -2,6 +2,7 @@ package com.company.gym.service;
 
 import com.company.gym.dao.*;
 import com.company.gym.entity.*;
+import com.company.gym.service.impl.AuthenticationServiceImpl;
 import com.company.gym.service.impl.TrainingServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -18,10 +19,20 @@ import java.util.*;
 @ExtendWith(MockitoExtension.class)
 class TrainingServiceImplTest {
 
-    @Mock private TrainingDAO trainingDAO;
-    @Mock private TraineeDAO traineeDAO;
-    @Mock private TrainerDAO trainerDAO;
-    @Mock private TrainingTypeDAO trainingTypeDAO;
+    @Mock
+    private TrainingDAO trainingDAO;
+
+    @Mock
+    private TraineeDAO traineeDAO;
+
+    @Mock
+    private TrainerDAO trainerDAO;
+
+    @Mock
+    private TrainingTypeDAO trainingTypeDAO;
+
+    @Mock
+    private AuthenticationServiceImpl authenticationService;
 
     @InjectMocks private TrainingServiceImpl trainingService;
 
