@@ -9,11 +9,12 @@ import com.company.gym.entity.*;
 import com.company.gym.exception.EntityNotFoundException;
 import com.company.gym.service.TrainingService;
 import com.company.gym.service.TrainingTypeService;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
@@ -40,7 +41,6 @@ class TrainingControllerTest {
     @Mock
     private TrainingTypeService trainingTypeService;
 
-    @InjectMocks
     private TrainingController trainingController;
 
     private Training testTraining;
@@ -49,6 +49,8 @@ class TrainingControllerTest {
 
     @BeforeEach
     void setUp() {
+        MeterRegistry meterRegistry = new SimpleMeterRegistry();
+
         testTrainingType = new TrainingType();
         testTrainingType.setId(1L);
         testTrainingType.setTrainingTypeName("Cardio");
@@ -85,6 +87,8 @@ class TrainingControllerTest {
         addTrainingRequest.setTrainingTypeName("Cardio");
         addTrainingRequest.setTrainingDate(new Date());
         addTrainingRequest.setTrainingDuration(60);
+
+        trainingController = new TrainingController(trainingService, trainingTypeDAO, trainingTypeService, meterRegistry);
     }
 
     @Test

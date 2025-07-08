@@ -9,11 +9,12 @@ import com.company.gym.entity.*;
 import com.company.gym.exception.EntityNotFoundException;
 import com.company.gym.service.TraineeService;
 import com.company.gym.service.TrainerService;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
@@ -35,7 +36,6 @@ class TraineeControllerTest {
     @Mock
     private TrainerService trainerService;
 
-    @InjectMocks
     private TraineeController traineeController;
 
     private Trainee testTrainee;
@@ -46,6 +46,8 @@ class TraineeControllerTest {
 
     @BeforeEach
     void setUp() {
+        MeterRegistry meterRegistry = new SimpleMeterRegistry();
+
         User testUser = new User();
         testUser.setId(1L);
         testUser.setUsername("john.doe");
@@ -93,6 +95,8 @@ class TraineeControllerTest {
         statusRequest.setUsername("john.doe");
         statusRequest.setPassword("password123");
         statusRequest.setActive(false);
+
+        traineeController = new TraineeController(traineeService, trainerService, meterRegistry);
     }
 
     private Training getTraining() {

@@ -47,8 +47,6 @@ public class TrainingServiceImpl extends AbstractBaseService<Training> implement
     @Override
     public Training createTraining(Credentials traineeCreds, Credentials trainerCreds, String trainingName,
                                    Long trainingTypeId, Date trainingDate, Integer duration) {
-        validateCredentials(traineeCreds);
-        validateCredentials(trainerCreds);
 
         if (duration <= 0) {
             throw new IllegalArgumentException("Duration must be positive");
@@ -77,7 +75,6 @@ public class TrainingServiceImpl extends AbstractBaseService<Training> implement
     @Override
     public List<Training> getTraineeTrainings(Credentials credentials, Date fromDate, Date toDate,
                                               String trainerUsername, Long trainingTypeId) {
-        validateCredentials(credentials);
 
         Trainee trainee = traineeDAO.findByUsername(credentials.getUsername())
                 .orElseThrow(() -> new IllegalArgumentException("Trainee not found"));
@@ -89,7 +86,6 @@ public class TrainingServiceImpl extends AbstractBaseService<Training> implement
     @Override
     public List<Training> getTrainerTrainings(Credentials credentials, Date fromDate, Date toDate,
                                               String traineeUsername) {
-        validateCredentials(credentials);
 
         Trainer trainer = trainerDAO.findByUsername(credentials.getUsername())
                 .orElseThrow(() -> new IllegalArgumentException("Trainer not found"));

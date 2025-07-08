@@ -108,7 +108,6 @@ public class TrainerServiceImpl extends AbstractUserService<Trainer> implements 
 
     @Override
     public Trainer updateTrainerProfile(Credentials credentials, Long specializationId) {
-        validateCredentials(credentials);
         String username = credentials.getUsername();
 
         Trainer trainer = trainerDAO.findByUsername(username)
@@ -126,7 +125,6 @@ public class TrainerServiceImpl extends AbstractUserService<Trainer> implements 
 
     @Override
     public void updateStatus(Credentials credentials) {
-        validateCredentials(credentials);
         String username = credentials.getUsername();
 
         Trainer trainer = trainerDAO.findByUsername(username)
