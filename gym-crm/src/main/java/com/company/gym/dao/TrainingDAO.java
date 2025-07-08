@@ -7,8 +7,8 @@ import java.util.List;
 
 public interface TrainingDAO extends BaseDAO<Training> {
     List<Training> findTrainingsByTraineeAndCriteria(Long traineeId, Date fromDate,
-                                                     Date toDate, String trainerName,
+                                                     Date toDate, String trainerUsername,
                                                      Long trainingTypeId);
     List<Training> findTrainingsByTrainerAndCriteria(Long trainerId, Date fromDate,
-                                                     Date toDate, String traineeName);
+                                                     Date toDate, String traineeUsername);
 }

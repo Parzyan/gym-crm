@@ -6,8 +6,11 @@ import static org.mockito.Mockito.*;
 import com.company.gym.dao.impl.UserDAOImpl;
 import com.company.gym.entity.Credentials;
 import com.company.gym.entity.User;
+import com.company.gym.exception.InactiveUserException;
 import com.company.gym.exception.InvalidCredentialsException;
 import com.company.gym.service.impl.AuthenticationServiceImpl;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -26,37 +29,67 @@ class AuthenticationServiceImplTest {
     @InjectMocks
     private AuthenticationServiceImpl authenticationService;
 
-    @Test
-    void authenticate_Success() {
-        User user = new User();
-        user.setUsername("test.user");
-        user.setPassword("correctPassword");
+    private User activeUser;
+    private User inactiveUser;
+    private Credentials validCredentials;
+    private Credentials invalidCredentials;
 
-        when(userDAO.findByUsername("test.user")).thenReturn(Optional.of(user));
+    @BeforeEach
+    void setUp() {
+        activeUser = new User();
+        activeUser.setUsername("john.doe");
+        activeUser.setPassword("password123");
+        activeUser.setIsActive(true);
 
-        Credentials credentials = new Credentials("test.user", "correctPassword");
-        assertDoesNotThrow(() -> authenticationService.authenticate(credentials));
+        inactiveUser = new User();
+        inactiveUser.setUsername("jane.doe");
+        inactiveUser.setPassword("password456");
+        inactiveUser.setIsActive(false);
+
+        validCredentials = new Credentials("john.doe", "password123");
+        invalidCredentials = new Credentials("unknown.user", "wrongpass");
     }
 
     @Test
-    void authenticate_UserNotFound() {
+    @DisplayName("Authenticate should succeed with valid credentials")
+    void authenticate_success() {
+        when(userDAO.findByUsername("john.doe")).thenReturn(Optional.of(activeUser));
+
+        assertDoesNotThrow(() -> authenticationService.authenticate(validCredentials));
+        verify(userDAO, times(1)).findByUsername("john.doe");
+    }
+
+    @Test
+    @DisplayName("Authenticate should throw InvalidCredentialsException for unknown user")
+    void authenticate_userNotFound() {
         when(userDAO.findByUsername("unknown.user")).thenReturn(Optional.empty());
 
-        Credentials credentials = new Credentials("unknown.user", "anyPassword");
-        assertThrows(InvalidCredentialsException.class,
-                () -> authenticationService.authenticate(credentials));
+        InvalidCredentialsException exception = assertThrows(InvalidCredentialsException.class,
+                () -> authenticationService.authenticate(invalidCredentials));
+
+        assertEquals("Invalid username or password", exception.getMessage());
+        verify(userDAO, times(1)).findByUsername("unknown.user");
     }
 
     @Test
-    void authenticate_WrongPassword() {
-        User user = new User();
-        user.setUsername("test.user");
-        user.setPassword("correctPassword");
+    @DisplayName("Authenticate should throw InactiveUserException for inactive user")
+    void authenticate_inactiveUser() {
+        when(userDAO.findByUsername("jane.doe")).thenReturn(Optional.of(inactiveUser));
 
-        when(userDAO.findByUsername("test.user")).thenReturn(Optional.of(user));
+        InactiveUserException exception = assertThrows(InactiveUserException.class,
+                () -> authenticationService.authenticate(new Credentials("jane.doe", "password456")));
 
-        Credentials credentials = new Credentials("test.user", "wrongPassword");
+        assertEquals("User is not active", exception.getMessage());
+        verify(userDAO, times(1)).findByUsername("jane.doe");
+    }
+
+    @Test
+    @DisplayName("Authenticate should log warning when user not found")
+    void authenticate_logsWarningForInvalidUser() {
+        when(userDAO.findByUsername("unknown.user")).thenReturn(Optional.empty());
+
         assertThrows(InvalidCredentialsException.class,
-                () -> authenticationService.authenticate(credentials));
+                () -> authenticationService.authenticate(invalidCredentials));
+
     }
 }

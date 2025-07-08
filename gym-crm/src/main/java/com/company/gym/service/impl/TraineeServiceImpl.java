@@ -1,11 +1,11 @@
 package com.company.gym.service.impl;
 
+import com.company.gym.dao.TrainingDAO;
 import com.company.gym.dao.impl.TraineeDAOImpl;
 import com.company.gym.dao.impl.TrainerDAOImpl;
-import com.company.gym.entity.Credentials;
-import com.company.gym.entity.Trainee;
-import com.company.gym.entity.Trainer;
-import com.company.gym.entity.User;
+import com.company.gym.dto.request.UpdateTraineeTrainersRequest;
+import com.company.gym.entity.*;
+import com.company.gym.exception.EntityNotFoundException;
 import com.company.gym.service.AbstractUserService;
 import com.company.gym.service.TraineeService;
 import com.company.gym.util.PasswordGenerator;
@@ -16,9 +16,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.Date;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -30,6 +28,7 @@ public class TraineeServiceImpl extends AbstractUserService<Trainee> implements 
     private PasswordGenerator passwordGenerator;
     private TraineeDAOImpl traineeDAO;
     private TrainerDAOImpl trainerDAO;
+    private TrainingDAO trainingDAO;
 
     @Autowired
     public void setTraineeDAO(TraineeDAOImpl traineeDAO) {
@@ -40,6 +39,11 @@ public class TraineeServiceImpl extends AbstractUserService<Trainee> implements 
     @Autowired
     public void setTrainerDAO(TrainerDAOImpl trainerDAO) {
         this.trainerDAO = trainerDAO;
+    }
+
+    @Autowired
+    public void setTrainingDAO(TrainingDAO trainingDAO) {
+        this.trainingDAO = trainingDAO;
     }
 
     @Autowired
@@ -169,5 +173,52 @@ public class TraineeServiceImpl extends AbstractUserService<Trainee> implements 
 
         trainee.setTrainers(trainers);
         traineeDAO.update(trainee);
+    }
+
+    @Override
+    public List<Trainer> getTrainersForTrainee(String traineeUsername) {
+        Trainee trainee = traineeDAO.findByUsername(traineeUsername)
+                .orElseThrow(() -> new EntityNotFoundException("Trainee not found with username: " + traineeUsername));
+
+        return trainee.getTrainings().stream()
+                .map(Training::getTrainer)
+                .distinct()
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public List<Trainer> updateTrainingTrainers(Credentials credentials,
+                                                List<UpdateTraineeTrainersRequest.TrainingTrainerUpdate> updates) {
+        validateCredentials(credentials);
+        Trainee authenticatedTrainee = traineeDAO.findByUsername(credentials.getUsername())
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Trainee not found with username: " + credentials.getUsername()));
+
+        for (UpdateTraineeTrainersRequest.TrainingTrainerUpdate update : updates) {
+            Training training = trainingDAO.findById(update.getTrainingId())
+                    .orElseThrow(() -> new EntityNotFoundException(
+                            "Training not found with ID: " + update.getTrainingId()));
+
+            if (!training.getTrainee().getId().equals(authenticatedTrainee.getId())) {
+                throw new SecurityException("Trainee " + credentials.getUsername() +
+                        " doesn't own training with ID: " + update.getTrainingId());
+            }
+
+            Trainer newTrainer = trainerDAO.findByUsername(update.getTrainerUsername())
+                    .orElseThrow(() -> new EntityNotFoundException(
+                            "Trainer not found with username: " + update.getTrainerUsername()));
+
+            training.setTrainer(newTrainer);
+            trainingDAO.update(training);
+        }
+
+        List<Training> updatedTrainings = trainingDAO.findTrainingsByTraineeAndCriteria(
+                authenticatedTrainee.getId(), null, null, null, null);
+
+        return updatedTrainings.stream()
+                .map(Training::getTrainer)
+                .distinct()
+                .collect(Collectors.toList());
     }
 }
