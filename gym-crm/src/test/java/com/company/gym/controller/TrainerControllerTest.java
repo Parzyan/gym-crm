@@ -7,13 +7,13 @@ import com.company.gym.dto.response.TrainerProfileResponse;
 import com.company.gym.dto.response.UserCredentialsResponse;
 import com.company.gym.entity.*;
 import com.company.gym.exception.EntityNotFoundException;
-import com.company.gym.exception.InvalidCredentialsException;
 import com.company.gym.service.TrainerService;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
@@ -33,7 +33,6 @@ class TrainerControllerTest {
     @Mock
     private TrainerService trainerService;
 
-    @InjectMocks
     private TrainerController trainerController;
 
     private Trainer testTrainer;
@@ -43,6 +42,8 @@ class TrainerControllerTest {
 
     @BeforeEach
     void setUp() {
+        MeterRegistry meterRegistry = new SimpleMeterRegistry();
+
         User testUser = new User();
         testUser.setId(1L);
         testUser.setUsername("jane.trainer");
@@ -73,6 +74,8 @@ class TrainerControllerTest {
         statusRequest.setUsername("jane.trainer");
         statusRequest.setPassword("password123");
         statusRequest.setActive(false);
+
+        trainerController = new TrainerController(trainerService, meterRegistry);
     }
 
     private Training getTraining() {
@@ -141,7 +144,6 @@ class TrainerControllerTest {
     @Test
     @DisplayName("Update Trainer Profile should return 200 OK on success")
     void updateTrainerProfile_onSuccess() {
-        // Set initial active status to false to trigger status update
         testTrainer.getUser().setIsActive(false);
 
         when(trainerService.getByUsername("jane.trainer"))

@@ -103,7 +103,6 @@ public class TraineeServiceImpl extends AbstractUserService<Trainee> implements 
 
     @Override
     public Trainee updateTraineeProfile(Credentials credentials, Date dateOfBirth, String address) {
-        validateCredentials(credentials);
         String username = credentials.getUsername();
         Optional<Trainee> traineeOpt = traineeDAO.findByUsername(username);
         if (traineeOpt.isPresent()) {
@@ -124,7 +123,6 @@ public class TraineeServiceImpl extends AbstractUserService<Trainee> implements 
 
     @Override
     public void updateStatus(Credentials credentials) {
-        validateCredentials(credentials);
         String username = credentials.getUsername();
         Optional<Trainee> traineeOpt = traineeDAO.findByUsername(username);
         if (traineeOpt.isPresent()) {
@@ -147,7 +145,6 @@ public class TraineeServiceImpl extends AbstractUserService<Trainee> implements 
     @Override
     @Transactional
     public void deleteTraineeProfile(Credentials credentials) {
-        validateCredentials(credentials);
         String username = credentials.getUsername();
         Optional<Trainee> traineeOpt = traineeDAO.findByUsername(username);
         if (traineeOpt.isPresent()) {
@@ -161,7 +158,6 @@ public class TraineeServiceImpl extends AbstractUserService<Trainee> implements 
 
     @Override
     public void updateTraineeTrainers(Credentials credentials, Set<Long> trainerIds) {
-        validateCredentials(credentials);
         String traineeUsername = credentials.getUsername();
         Trainee trainee = traineeDAO.findByUsername(traineeUsername)
                 .orElseThrow(() -> new IllegalArgumentException("Trainee not found"));
@@ -190,7 +186,6 @@ public class TraineeServiceImpl extends AbstractUserService<Trainee> implements 
     @Transactional
     public List<Trainer> updateTrainingTrainers(Credentials credentials,
                                                 List<UpdateTraineeTrainersRequest.TrainingTrainerUpdate> updates) {
-        validateCredentials(credentials);
         Trainee authenticatedTrainee = traineeDAO.findByUsername(credentials.getUsername())
                 .orElseThrow(() -> new EntityNotFoundException(
                         "Trainee not found with username: " + credentials.getUsername()));
