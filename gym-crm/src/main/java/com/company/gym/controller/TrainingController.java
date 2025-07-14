@@ -11,8 +11,7 @@ import com.company.gym.entity.TrainingType;
 import com.company.gym.exception.EntityNotFoundException;
 import com.company.gym.service.TrainingService;
 import com.company.gym.service.TrainingTypeService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import io.micrometer.core.instrument.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
@@ -34,11 +33,23 @@ public class TrainingController {
     private final TrainingTypeDAO trainingTypeDAO;
     private final TrainingTypeService trainingTypeService;
 
+    private final Counter trainingCreationCounter;
+    private final Timer trainingListFetchTimer;
+
     @Autowired
-    public TrainingController(TrainingService trainingService, TrainingTypeDAO trainingTypeDAO, TrainingTypeService trainingTypeService) {
+    public TrainingController(TrainingService trainingService, TrainingTypeDAO trainingTypeDAO, TrainingTypeService trainingTypeService, MeterRegistry meterRegistry) {
         this.trainingService = trainingService;
         this.trainingTypeDAO = trainingTypeDAO;
         this.trainingTypeService = trainingTypeService;
+
+        this.trainingCreationCounter = Counter.builder("trainings.creations.total")
+                .description("Total number of new training sessions created")
+                .register(meterRegistry);
+
+        this.trainingListFetchTimer = Timer.builder("trainings.retrieval.latency")
+                .description("Latency for fetching lists of trainings")
+                .publishPercentiles(0.5, 0.95)
+                .register(meterRegistry);
     }
 
     @Operation(summary = "Get a trainee's training sessions", description = "Retrieves a list of trainings for a specific trainee, with optional filters.")
@@ -56,26 +67,27 @@ public class TrainingController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Date periodTo,
             @RequestParam(required = false) String trainerUsername,
             @RequestParam(required = false) String trainingType) {
+        return trainingListFetchTimer.record(() -> {
+            Long trainingTypeId = null;
+            if (trainingType != null && !trainingType.isEmpty()) {
+                TrainingType type = trainingTypeDAO.findByName(trainingType)
+                        .orElseThrow(() -> new EntityNotFoundException("Training type not found: " + trainingType));
+                trainingTypeId = type.getId();
+            }
 
-        Long trainingTypeId = null;
-        if (trainingType != null && !trainingType.isEmpty()) {
-            TrainingType type = trainingTypeDAO.findByName(trainingType)
-                    .orElseThrow(() -> new EntityNotFoundException("Training type not found: " + trainingType));
-            trainingTypeId = type.getId();
-        }
+            List<Training> trainings = trainingService.getTraineeTrainings(
+                    new Credentials(username, null), periodFrom, periodTo, trainerUsername, trainingTypeId);
 
-        List<Training> trainings = trainingService.getTraineeTrainings(
-                new Credentials(username, null), periodFrom, periodTo, trainerUsername, trainingTypeId);
+            List<TraineeTrainingResponse> response = trainings.stream().map(t -> new TraineeTrainingResponse(
+                    t.getTrainingName(),
+                    t.getTrainingDate(),
+                    t.getTrainingType().getTrainingTypeName(),
+                    t.getDuration(),
+                    t.getTrainer().getUser().getFirstName() + " " + t.getTrainer().getUser().getLastName()
+            )).collect(Collectors.toList());
 
-        List<TraineeTrainingResponse> response = trainings.stream().map(t -> new TraineeTrainingResponse(
-                t.getTrainingName(),
-                t.getTrainingDate(),
-                t.getTrainingType().getTrainingTypeName(),
-                t.getDuration(),
-                t.getTrainer().getUser().getFirstName() + " " + t.getTrainer().getUser().getLastName()
-        )).collect(Collectors.toList());
-
-        return ResponseEntity.ok(response);
+            return ResponseEntity.ok(response);
+        });
     }
 
     @Operation(summary = "Get a trainer's training sessions", description = "Retrieves a list of trainings for a specific trainer, with optional filters.")
@@ -91,19 +103,20 @@ public class TrainingController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Date periodFrom,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Date periodTo,
             @RequestParam(required = false) String traineeUsername) {
+        return trainingListFetchTimer.record(() -> {
+            List<Training> trainings = trainingService.getTrainerTrainings(
+                    new Credentials(username, null), periodFrom, periodTo, traineeUsername);
 
-        List<Training> trainings = trainingService.getTrainerTrainings(
-                new Credentials(username, null), periodFrom, periodTo, traineeUsername);
+            List<TrainerTrainingResponse> response = trainings.stream().map(t -> new TrainerTrainingResponse(
+                    t.getTrainingName(),
+                    t.getTrainingDate(),
+                    t.getTrainingType().getTrainingTypeName(),
+                    t.getDuration(),
+                    t.getTrainee().getUser().getFirstName() + " " + t.getTrainee().getUser().getLastName()
+            )).collect(Collectors.toList());
 
-        List<TrainerTrainingResponse> response = trainings.stream().map(t -> new TrainerTrainingResponse(
-                t.getTrainingName(),
-                t.getTrainingDate(),
-                t.getTrainingType().getTrainingTypeName(),
-                t.getDuration(),
-                t.getTrainee().getUser().getFirstName() + " " + t.getTrainee().getUser().getLastName()
-        )).collect(Collectors.toList());
-
-        return ResponseEntity.ok(response);
+            return ResponseEntity.ok(response);
+        });
     }
 
     @Operation(summary = "Add a new training session", description = "Creates a new training record for a trainee with a trainer.")
@@ -130,6 +143,9 @@ public class TrainingController {
                 request.getTrainingDate(),
                 request.getTrainingDuration()
         );
+
+        trainingCreationCounter.increment();
+
         return ResponseEntity.ok().build();
     }
 

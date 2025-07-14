@@ -12,6 +12,7 @@ import com.company.gym.entity.Training;
 import com.company.gym.exception.EntityNotFoundException;
 import com.company.gym.service.TraineeService;
 import com.company.gym.service.TrainerService;
+import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,6 +26,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import io.micrometer.core.instrument.*;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -38,10 +40,35 @@ public class TraineeController {
     private final TraineeService traineeService;
     private final TrainerService trainerService;
 
+    private final Counter registrationCounter;
+    private final Timer profileUpdateTimer;
+    private final DistributionSummary trainersPerTrainee;
+    private final Counter profileDeleteCounter;
+
     @Autowired
-    public TraineeController(TraineeService traineeService, TrainerService trainerService) {
+    public TraineeController(TraineeService traineeService, TrainerService trainerService, MeterRegistry meterRegistry) {
         this.traineeService = traineeService;
         this.trainerService = trainerService;
+
+        this.registrationCounter = Counter.builder("trainee.registrations.total")
+                .description("Total number of new trainee registrations")
+                .tag("entity", "trainee")
+                .register(meterRegistry);
+
+        this.profileUpdateTimer = Timer.builder("trainee.profile.updates.latency")
+                .description("Time taken to update a trainee's profile")
+                .publishPercentiles(0.5, 0.95)
+                .register(meterRegistry);
+
+        this.trainersPerTrainee = DistributionSummary.builder("trainee.trainers.count")
+                .description("Distribution of the number of trainers assigned to a trainee")
+                .baseUnit("trainers")
+                .register(meterRegistry);
+
+        this.profileDeleteCounter = Counter.builder("trainee.deletions.total")
+                .description("Total number of trainee profiles deleted")
+                .tag("entity", "trainee")
+                .register(meterRegistry);
     }
 
     @Operation(summary = "Register a new trainee", description = "Creates a new trainee profile and returns their generated credentials.")
@@ -59,6 +86,8 @@ public class TraineeController {
                 request.getDateOfBirth(),
                 request.getAddress()
         );
+
+        registrationCounter.increment();
 
         UserCredentialsResponse response = new UserCredentialsResponse(
                 newTrainee.getUser().getUsername(),
@@ -82,6 +111,9 @@ public class TraineeController {
         Trainee trainee = traineeService.getByUsername(username)
                 .orElseThrow(() -> new EntityNotFoundException("Trainee with username '" + username + "' not found."));
 
+        TraineeProfileResponse response = mapTraineeToProfileResponse(trainee);
+        trainersPerTrainee.record(response.getTrainersList().size());
+
         logger.info("Successfully fetched profile for trainee: {}", username);
         return ResponseEntity.ok(mapTraineeToProfileResponse(trainee));
     }
@@ -98,23 +130,26 @@ public class TraineeController {
             @RequestAttribute("authenticatedUsername") String username,
             @Valid @RequestBody UpdateTraineeProfileRequest request) {
 
-        Trainee updatedTrainee = traineeService.updateTraineeProfile(
-                new Credentials(username, null),
-                request.getDateOfBirth(),
-                request.getAddress()
-        );
+        return profileUpdateTimer.record(() -> {
+            Trainee updatedTrainee = traineeService.updateTraineeProfile(
+                    new Credentials(username, null),
+                    request.getDateOfBirth(),
+                    request.getAddress()
+            );
 
-        if (updatedTrainee.getUser().getIsActive() != request.isActive()) {
-            traineeService.updateStatus(new Credentials(username, null));
-        }
+            if (updatedTrainee.getUser().getIsActive() != request.isActive()) {
+                traineeService.updateStatus(new Credentials(username, null));
+            }
 
-        Trainee finalTrainee = traineeService.getByUsername(username)
-                .orElseThrow(() -> new EntityNotFoundException("Trainee with username '" + username + "' not found after update."));
+            Trainee finalTrainee = traineeService.getByUsername(username)
+                    .orElseThrow(() -> new EntityNotFoundException("Trainee with username '" + username + "' not found after update."));
 
-        TraineeProfileResponse response = mapTraineeToProfileResponse(finalTrainee);
+            TraineeProfileResponse response = mapTraineeToProfileResponse(finalTrainee);
+            trainersPerTrainee.record(response.getTrainersList().size());
 
-        logger.info("Successfully updated profile for trainee: {}", username);
-        return ResponseEntity.ok(response);
+            logger.info("Successfully updated profile for trainee: {}", username);
+            return ResponseEntity.ok(response);
+        });
     }
 
     @Operation(summary = "Delete a trainee's profile", description = "Permanently deletes a trainee's profile.")
@@ -126,6 +161,9 @@ public class TraineeController {
     public ResponseEntity<Void> deleteTraineeProfile(
             @RequestAttribute("authenticatedUsername") String username) {
         traineeService.deleteTraineeProfile(new Credentials(username, null));
+
+        profileDeleteCounter.increment();
+
         logger.info("Successfully deleted trainee profile: {}", username);
         return ResponseEntity.noContent().build();
     }

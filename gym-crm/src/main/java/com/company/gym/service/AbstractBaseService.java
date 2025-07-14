@@ -42,13 +42,4 @@ public abstract class AbstractBaseService<T> implements BaseService<T> {
     public List<T> getAll() {
         return dao.findAll();
     }
-
-    protected void validateCredentials(Credentials credentials) {
-        try {
-            authenticationService.authenticate(credentials);
-        } catch (InvalidCredentialsException e) {
-            logger.warn("Authentication failed for user: {}", credentials.getUsername());
-            throw e;
-        }
-    }
 }

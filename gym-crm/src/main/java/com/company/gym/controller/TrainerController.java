@@ -23,6 +23,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import io.micrometer.core.instrument.*;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -35,9 +36,33 @@ public class TrainerController {
     private static final Logger logger = LoggerFactory.getLogger(TrainerController.class);
     private final TrainerService trainerService;
 
+    private final Counter registrationCounter;
+    private final Timer profileUpdateTimer;
+    private final DistributionSummary traineesPerTrainer;
+    private final Counter statusUpdateCounter;
+
     @Autowired
-    public TrainerController(TrainerService trainerService) {
+    public TrainerController(TrainerService trainerService, MeterRegistry meterRegistry) {
         this.trainerService = trainerService;
+
+        this.registrationCounter = Counter.builder("trainer.registrations.total")
+                .description("Total number of new trainer registrations")
+                .tag("entity", "trainer")
+                .register(meterRegistry);
+
+        this.profileUpdateTimer = Timer.builder("trainer.profile.updates.latency")
+                .description("Time taken to update a trainer's profile")
+                .publishPercentiles(0.5, 0.95)
+                .register(meterRegistry);
+
+        this.traineesPerTrainer = DistributionSummary.builder("trainer.assigned.trainees.distribution")
+                .description("Distribution of the number of trainees assigned to a trainer")
+                .baseUnit("trainees")
+                .register(meterRegistry);
+
+        this.statusUpdateCounter = Counter.builder("trainer.status.updates.total")
+                .description("Total number of trainer status updates (activate/deactivate)")
+                .register(meterRegistry);
     }
 
     @Operation(summary = "Register a new trainer", description = "Creates a new trainer profile and returns their generated credentials.")
@@ -50,6 +75,8 @@ public class TrainerController {
     public ResponseEntity<UserCredentialsResponse> registerTrainer(@Valid @RequestBody TrainerRegistrationRequest request) {
         Trainer newTrainer = trainerService.createTrainerProfile(
                 request.getFirstName(), request.getLastName(), request.getSpecializationId());
+
+        registrationCounter.increment();
 
         UserCredentialsResponse response = new UserCredentialsResponse(
                 newTrainer.getUser().getUsername(), newTrainer.getUser().getPassword());
@@ -71,6 +98,9 @@ public class TrainerController {
         Trainer trainer = trainerService.getByUsername(username)
                 .orElseThrow(() -> new EntityNotFoundException("Trainer with username '" + username + "' not found."));
 
+        TrainerProfileResponse response = mapTrainerToProfileResponse(trainer);
+        traineesPerTrainer.record(response.getTrainees().size());
+
         logger.info("Successfully fetched profile for trainer: {}", username);
         return ResponseEntity.ok(mapTrainerToProfileResponse(trainer));
     }
@@ -86,20 +116,22 @@ public class TrainerController {
     public ResponseEntity<TrainerProfileResponse> updateTrainerProfile(
             @RequestAttribute("authenticatedUsername") String username,
             @Valid @RequestBody UpdateTrainerProfileRequest request) {
-        Trainer currentTrainer = trainerService.getByUsername(username)
-                .orElseThrow(() -> new EntityNotFoundException("Trainer with username '" + username + "' not found."));
+        return profileUpdateTimer.record(() -> {
+            Trainer currentTrainer = trainerService.getByUsername(username)
+                    .orElseThrow(() -> new EntityNotFoundException("Trainer with username '" + username + "' not found."));
 
-        if (currentTrainer.getUser().getIsActive() != request.isActive()) {
-            trainerService.updateStatus(new Credentials(username, null));
-        }
+            if (currentTrainer.getUser().getIsActive() != request.isActive()) {
+                trainerService.updateStatus(new Credentials(username, null));
+            }
 
-        Trainer updatedTrainer = trainerService.getByUsername(username)
-                .orElseThrow(() -> new EntityNotFoundException("Trainer with username '" + username + "' disappeared after update."));
+            Trainer updatedTrainer = trainerService.getByUsername(username)
+                    .orElseThrow(() -> new EntityNotFoundException("Trainer with username '" + username + "' disappeared after update."));
 
-        TrainerProfileResponse response = mapTrainerToProfileResponse(updatedTrainer);
+            TrainerProfileResponse response = mapTrainerToProfileResponse(updatedTrainer);
 
-        logger.info("Successfully updated trainer profile: {}", username);
-        return ResponseEntity.ok(response);
+            logger.info("Successfully updated trainer profile: {}", username);
+            return ResponseEntity.ok(response);
+        });
     }
 
     @Operation(summary = "Activate or deactivate a trainer", description = "Sets the active status for a trainer's profile.")
@@ -116,6 +148,8 @@ public class TrainerController {
         if (trainer.getUser().getIsActive() != request.isActive()) {
             Credentials credentials = new Credentials(request.getUsername(), request.getPassword());
             trainerService.updateStatus(credentials);
+
+            statusUpdateCounter.increment();
         }
 
         logger.info("Successfully updated status for trainer {}", request.getUsername());
