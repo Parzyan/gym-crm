@@ -20,6 +20,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
+import java.security.Principal;
 import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -36,6 +37,9 @@ class TraineeControllerTest {
     @Mock
     private TrainerService trainerService;
 
+    @Mock
+    private Principal principal;
+
     private TraineeController traineeController;
 
     private Trainee testTrainee;
@@ -43,6 +47,7 @@ class TraineeControllerTest {
     private UpdateTraineeProfileRequest updateRequest;
     private UpdateTraineeTrainersRequest updateTrainerRequest;
     private UpdateActiveStatusRequest statusRequest;
+    private final String TEST_USERNAME = "john.doe";
 
     @BeforeEach
     void setUp() {
@@ -75,6 +80,18 @@ class TraineeControllerTest {
         updateRequest.setActive(true);
 
         updateTrainerRequest = new UpdateTraineeTrainersRequest();
+        List<UpdateTraineeTrainersRequest.TrainingTrainerUpdate> updates = getTrainingTrainerUpdates();
+        updateTrainerRequest.setUpdates(updates);
+
+        statusRequest = new UpdateActiveStatusRequest();
+        statusRequest.setUsername("john.doe");
+        statusRequest.setPassword("password123");
+        statusRequest.setActive(false);
+
+        traineeController = new TraineeController(traineeService, trainerService, meterRegistry);
+    }
+
+    private static List<UpdateTraineeTrainersRequest.TrainingTrainerUpdate> getTrainingTrainerUpdates() {
         List<UpdateTraineeTrainersRequest.TrainingTrainerUpdate> updates = new ArrayList<>();
 
         UpdateTraineeTrainersRequest.TrainingTrainerUpdate update1 =
@@ -89,14 +106,7 @@ class TraineeControllerTest {
 
         updates.add(update1);
         updates.add(update2);
-        updateTrainerRequest.setUpdates(updates);
-
-        statusRequest = new UpdateActiveStatusRequest();
-        statusRequest.setUsername("john.doe");
-        statusRequest.setPassword("password123");
-        statusRequest.setActive(false);
-
-        traineeController = new TraineeController(traineeService, trainerService, meterRegistry);
+        return updates;
     }
 
     private Training getTraining() {
@@ -136,21 +146,23 @@ class TraineeControllerTest {
     @Test
     @DisplayName("Register Trainee should return 201 Created on success")
     void registerTrainee_onSuccess() {
-        when(traineeService.createTraineeProfile(anyString(), anyString(), any(), anyString())).thenReturn(testTrainee);
+        UserCredentialsResponse credentials = new UserCredentialsResponse(TEST_USERNAME, "password");
+        when(traineeService.createTraineeProfile(anyString(), anyString(), any(), anyString())).thenReturn(credentials);
 
         ResponseEntity<UserCredentialsResponse> response = traineeController.registerTrainee(registrationRequest);
 
         assertEquals(HttpStatus.CREATED, response.getStatusCode());
         assertNotNull(response.getBody());
-        assertEquals("john.doe", response.getBody().getUsername());
+        assertEquals(TEST_USERNAME, response.getBody().getUsername());
     }
 
     @Test
     @DisplayName("Get Trainee Profile should return 200 OK")
     void getTraineeProfile_onSuccess() {
-        when(traineeService.getByUsername("john.doe")).thenReturn(Optional.of(testTrainee));
+        when(principal.getName()).thenReturn(TEST_USERNAME);
+        when(traineeService.getByUsername(TEST_USERNAME)).thenReturn(Optional.of(testTrainee));
 
-        ResponseEntity<TraineeProfileResponse> response = traineeController.getTraineeProfile("john.doe");
+        ResponseEntity<TraineeProfileResponse> response = traineeController.getTraineeProfile(principal);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
@@ -160,19 +172,21 @@ class TraineeControllerTest {
     @Test
     @DisplayName("Get Trainee Profile should throw EntityNotFoundException if trainee does not exist")
     void getTraineeProfile_traineeNotFound() {
-        when(traineeService.getByUsername("john.doe")).thenReturn(Optional.empty());
+        when(principal.getName()).thenReturn(TEST_USERNAME);
+        when(traineeService.getByUsername(TEST_USERNAME)).thenReturn(Optional.empty());
 
-        assertThrows(EntityNotFoundException.class, () -> traineeController.getTraineeProfile("john.doe"));
+        assertThrows(EntityNotFoundException.class, () -> traineeController.getTraineeProfile(principal));
     }
 
     @Test
     @DisplayName("Update Trainee Profile should return 200 OK on success")
     void updateTraineeProfile_onSuccess() {
+        when(principal.getName()).thenReturn(TEST_USERNAME);
         testTrainee.getUser().setIsActive(false);
         when(traineeService.updateTraineeProfile(any(), any(), any())).thenReturn(testTrainee);
         when(traineeService.getByUsername("john.doe")).thenReturn(Optional.of(testTrainee));
 
-        ResponseEntity<TraineeProfileResponse> response = traineeController.updateTraineeProfile("john.doe", updateRequest);
+        ResponseEntity<TraineeProfileResponse> response = traineeController.updateTraineeProfile(principal, updateRequest);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
@@ -183,7 +197,7 @@ class TraineeControllerTest {
         ));
 
         verify(traineeService, times(1)).updateTraineeProfile(
-                argThat(credentials -> credentials.getUsername().equals("john.doe") && credentials.getPassword() == null),
+                argThat(credentials -> credentials.getUsername().equals(TEST_USERNAME) && credentials.getPassword() == null),
                 eq(updateRequest.getDateOfBirth()),
                 eq(updateRequest.getAddress())
         );
@@ -192,6 +206,7 @@ class TraineeControllerTest {
     @Test
     @DisplayName("Update training trainers should return 200 OK on success")
     void updateTrainingTrainers_onSuccess() {
+        when(principal.getName()).thenReturn(TEST_USERNAME);
         List<Trainer> updatedTrainers = List.of(
                 createTrainer("trainer.jane", "Jane", "Doe", "Yoga"),
                 createTrainer("trainer.mark", "Mark", "Smith", "Pilates")
@@ -200,14 +215,14 @@ class TraineeControllerTest {
         when(traineeService.updateTrainingTrainers(any(), any())).thenReturn(updatedTrainers);
 
         ResponseEntity<UpdatedTrainersListResponse> response = traineeController
-                .updateTrainingTrainers("john.doe", updateTrainerRequest);
+                .updateTrainingTrainers(principal, updateTrainerRequest);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
         assertEquals(2, response.getBody().getTrainers().size());
 
         verify(traineeService, times(1)).updateTrainingTrainers(
-                argThat(credentials -> credentials.getUsername().equals("john.doe") && credentials.getPassword() == null),
+                argThat(credentials -> credentials.getUsername().equals(TEST_USERNAME) && credentials.getPassword() == null),
                 eq(updateTrainerRequest.getUpdates())
         );
     }
@@ -215,15 +230,17 @@ class TraineeControllerTest {
     @Test
     @DisplayName("Update should throw EntityNotFoundException if training not found")
     void updateTrainingTrainers_trainingNotFound() {
+        when(principal.getName()).thenReturn(TEST_USERNAME);
         when(traineeService.updateTrainingTrainers(any(Credentials.class), anyList()))
                 .thenThrow(new EntityNotFoundException("Training not found"));
 
-        assertThrows(EntityNotFoundException.class, () -> traineeController.updateTrainingTrainers("john.doe", updateTrainerRequest));
+        assertThrows(EntityNotFoundException.class, () -> traineeController.updateTrainingTrainers(principal, updateTrainerRequest));
     }
 
     @Test
     @DisplayName("Get Unassigned Trainers should return 200 OK with filtered list")
     void getUnassignedTrainers_onSuccess() {
+        when(principal.getName()).thenReturn(TEST_USERNAME);
         Trainer activeTrainer = new Trainer();
         User activeUser = new User();
         activeUser.setIsActive(true);
@@ -232,7 +249,7 @@ class TraineeControllerTest {
 
         when(trainerService.getUnassignedTrainers("john.doe")).thenReturn(Collections.singletonList(activeTrainer));
 
-        ResponseEntity<List<UnassignedTrainerResponse>> response = traineeController.getUnassignedTrainers("john.doe");
+        ResponseEntity<List<UnassignedTrainerResponse>> response = traineeController.getUnassignedTrainers(principal);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
@@ -242,7 +259,7 @@ class TraineeControllerTest {
     @Test
     @DisplayName("Activate Trainee should return 200 OK on success")
     void activateTrainee_onSuccess() {
-        when(traineeService.getByUsername("john.doe")).thenReturn(Optional.of(testTrainee));
+        when(traineeService.getByUsername(TEST_USERNAME)).thenReturn(Optional.of(testTrainee));
         doNothing().when(traineeService).updateStatus(any(Credentials.class));
 
         ResponseEntity<Void> response = traineeController.updateTraineeStatus(statusRequest);
@@ -254,9 +271,10 @@ class TraineeControllerTest {
     @Test
     @DisplayName("Delete Trainee Profile should return 204 No Content")
     void deleteTraineeProfile_onSuccess() {
+        when(principal.getName()).thenReturn(TEST_USERNAME);
         doNothing().when(traineeService).deleteTraineeProfile(any(Credentials.class));
 
-        ResponseEntity<Void> response = traineeController.deleteTraineeProfile("john.doe");
+        ResponseEntity<Void> response = traineeController.deleteTraineeProfile(principal);
 
         assertEquals(HttpStatus.NO_CONTENT, response.getStatusCode());
         verify(traineeService, times(1)).deleteTraineeProfile(any(Credentials.class));

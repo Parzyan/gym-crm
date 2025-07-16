@@ -21,6 +21,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
+import java.security.Principal;
 import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -62,11 +63,12 @@ public class TrainingController {
     })
     @GetMapping("/trainee")
     public ResponseEntity<List<TraineeTrainingResponse>> getTraineeTrainings(
-            @RequestAttribute("authenticatedUsername") String username,
+            Principal principal,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Date periodFrom,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Date periodTo,
             @RequestParam(required = false) String trainerUsername,
             @RequestParam(required = false) String trainingType) {
+        String username = principal.getName();
         return trainingListFetchTimer.record(() -> {
             Long trainingTypeId = null;
             if (trainingType != null && !trainingType.isEmpty()) {
@@ -99,10 +101,11 @@ public class TrainingController {
     })
     @GetMapping("/trainer")
     public ResponseEntity<List<TrainerTrainingResponse>> getTrainerTrainings(
-            @RequestAttribute("authenticatedUsername") String username,
+            Principal principal,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Date periodFrom,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Date periodTo,
             @RequestParam(required = false) String traineeUsername) {
+        String username = principal.getName();
         return trainingListFetchTimer.record(() -> {
             List<Training> trainings = trainingService.getTrainerTrainings(
                     new Credentials(username, null), periodFrom, periodTo, traineeUsername);
@@ -128,9 +131,12 @@ public class TrainingController {
             @ApiResponse(responseCode = "500", description = "Internal Server Error")
     })
     @PostMapping
-    public ResponseEntity<Void> addTraining(@RequestBody AddTrainingRequest request) {
-        Credentials traineeCreds = new Credentials(request.getTraineeUsername(), request.getTraineePassword());
-        Credentials trainerCreds = new Credentials(request.getTrainerUsername(), request.getTrainerPassword());
+    public ResponseEntity<Void> addTraining(Principal principal,
+                                            @RequestBody AddTrainingRequest request) {
+        String traineeUsername = principal.getName();
+
+        Credentials traineeCreds = new Credentials(traineeUsername, null);
+        Credentials trainerCreds = new Credentials(request.getTrainerUsername(), null);
 
         TrainingType trainingType = trainingTypeDAO.findByName(request.getTrainingTypeName())
                 .orElseThrow(() -> new EntityNotFoundException("Training Type not found: " + request.getTrainingTypeName()));

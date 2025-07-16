@@ -25,6 +25,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.micrometer.core.instrument.*;
 
+import java.security.Principal;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -73,13 +74,10 @@ public class TrainerController {
     })
     @PostMapping("/register")
     public ResponseEntity<UserCredentialsResponse> registerTrainer(@Valid @RequestBody TrainerRegistrationRequest request) {
-        Trainer newTrainer = trainerService.createTrainerProfile(
+        UserCredentialsResponse response = trainerService.createTrainerProfile(
                 request.getFirstName(), request.getLastName(), request.getSpecializationId());
 
         registrationCounter.increment();
-
-        UserCredentialsResponse response = new UserCredentialsResponse(
-                newTrainer.getUser().getUsername(), newTrainer.getUser().getPassword());
 
         logger.info("Successfully registered trainer. Username: {}", response.getUsername());
         return new ResponseEntity<>(response, HttpStatus.CREATED);
@@ -94,7 +92,8 @@ public class TrainerController {
     })
     @GetMapping("/profile")
     public ResponseEntity<TrainerProfileResponse> getTrainerProfile(
-            @RequestAttribute("authenticatedUsername") String username) {
+            Principal principal) {
+        String username = principal.getName();
         Trainer trainer = trainerService.getByUsername(username)
                 .orElseThrow(() -> new EntityNotFoundException("Trainer with username '" + username + "' not found."));
 
@@ -114,8 +113,9 @@ public class TrainerController {
     })
     @PutMapping("/profile")
     public ResponseEntity<TrainerProfileResponse> updateTrainerProfile(
-            @RequestAttribute("authenticatedUsername") String username,
+            Principal principal,
             @Valid @RequestBody UpdateTrainerProfileRequest request) {
+        String username = principal.getName();
         return profileUpdateTimer.record(() -> {
             Trainer currentTrainer = trainerService.getByUsername(username)
                     .orElseThrow(() -> new EntityNotFoundException("Trainer with username '" + username + "' not found."));

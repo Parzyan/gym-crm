@@ -1,10 +1,16 @@
 package com.company.gym.exception;
 
 import com.company.gym.dto.response.ApiErrorResponse;
+import com.company.gym.security.LoginAttemptService;
+import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -12,19 +18,39 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 public class RestExceptionHandler {
     private static final Logger log = LoggerFactory.getLogger(RestExceptionHandler.class);
 
-    private static final String UNAUTHORIZED_MESSAGE = "Authentication failed or user is inactive. Please check your credentials.";
+    @Autowired
+    private LoginAttemptService loginAttemptService;
+
+    private static final String ACCOUNT_DISABLED_MESSAGE = "This user account has been disabled.";
+    private static final String UNAUTHORIZED_MESSAGE = "Authentication failed. Please check your credentials.";
     private static final String NOT_FOUND_MESSAGE = "The requested resource could not be found.";
     private static final String BAD_REQUEST_MESSAGE = "The request is invalid. Please check the provided input.";
     private static final String INTERNAL_SERVER_ERROR_MESSAGE = "An unexpected internal server error has occurred. Please try again later.";
+    private static final String LOCKED_ERROR_MESSAGE = "Your IP has been temporarily blocked due to too many failed login attempts.";
 
-    @ExceptionHandler({InvalidCredentialsException.class, InactiveUserException.class})
-    protected ResponseEntity<ApiErrorResponse> handleUnauthorizedExceptions(RuntimeException ex) {
+    @ExceptionHandler({BadCredentialsException.class, InvalidCredentialsException.class})
+    protected ResponseEntity<ApiErrorResponse> handleBadCredentials(Exception ex, HttpServletRequest request) {
         log.warn("Authentication failure: {}", ex.getMessage());
+
+        final String clientIp = getClientIP(request);
+        loginAttemptService.loginFailed(clientIp);
+
         ApiErrorResponse apiError = new ApiErrorResponse(
                 "Unauthorized",
                 UNAUTHORIZED_MESSAGE
         );
         return new ResponseEntity<>(apiError, HttpStatus.UNAUTHORIZED);
+    }
+
+
+    @ExceptionHandler({DisabledException.class, InactiveUserException.class})
+    protected ResponseEntity<ApiErrorResponse> handleDisabledAccount(Exception ex) {
+        log.warn("Login attempt for disabled account: {}", ex.getMessage());
+        ApiErrorResponse apiError = new ApiErrorResponse(
+                "Forbidden",
+                ACCOUNT_DISABLED_MESSAGE
+        );
+        return new ResponseEntity<>(apiError, HttpStatus.FORBIDDEN);
     }
 
     @ExceptionHandler(EntityNotFoundException.class)
@@ -55,5 +81,23 @@ public class RestExceptionHandler {
                 INTERNAL_SERVER_ERROR_MESSAGE
         );
         return new ResponseEntity<>(apiError, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    @ExceptionHandler({LockedException.class})
+    protected ResponseEntity<ApiErrorResponse> handleLockedAccount(LockedException ex) {
+        log.warn("Login attempt from a blocked IP: {}", ex.getMessage());
+        ApiErrorResponse apiError = new ApiErrorResponse(
+                "IP Blocked",
+                LOCKED_ERROR_MESSAGE
+        );
+        return new ResponseEntity<>(apiError, HttpStatus.LOCKED);
+    }
+
+    private String getClientIP(HttpServletRequest request) {
+        final String xfHeader = request.getHeader("X-Forwarded-For");
+        if (xfHeader != null) {
+            return xfHeader.split(",")[0];
+        }
+        return request.getRemoteAddr();
     }
 }

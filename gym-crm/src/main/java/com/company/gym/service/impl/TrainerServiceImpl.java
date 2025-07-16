@@ -3,6 +3,7 @@ package com.company.gym.service.impl;
 import com.company.gym.dao.TraineeDAO;
 import com.company.gym.dao.TrainerDAO;
 import com.company.gym.dao.TrainingTypeDAO;
+import com.company.gym.dto.response.UserCredentialsResponse;
 import com.company.gym.entity.*;
 import com.company.gym.service.AbstractUserService;
 import com.company.gym.service.TrainerService;
@@ -12,6 +13,7 @@ import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -27,6 +29,7 @@ public class TrainerServiceImpl extends AbstractUserService<Trainer> implements 
     private TrainingTypeDAO trainingTypeDAO;
     private UsernameGenerator usernameGenerator;
     private PasswordGenerator passwordGenerator;
+    private PasswordEncoder passwordEncoder;
 
     @Autowired
     public void setTrainerDAO(TrainerDAO trainerDAO) {
@@ -54,8 +57,13 @@ public class TrainerServiceImpl extends AbstractUserService<Trainer> implements 
         this.passwordGenerator = passwordGenerator;
     }
 
+    @Autowired
+    public void setPasswordEncoder(PasswordEncoder passwordEncoder) {
+        this.passwordEncoder = passwordEncoder;
+    }
+
     @Override
-    public Trainer createTrainerProfile(String firstName, String lastName, Long specializationId) {
+    public UserCredentialsResponse createTrainerProfile(String firstName, String lastName, Long specializationId) {
         if(specializationId == null) {
             throw new IllegalArgumentException("Specialization id cannot be null");
         }
@@ -75,7 +83,7 @@ public class TrainerServiceImpl extends AbstractUserService<Trainer> implements 
         user.setFirstName(firstName);
         user.setLastName(lastName);
         user.setUsername(username);
-        user.setPassword(password);
+        user.setPassword(passwordEncoder.encode(password));
         user.setIsActive(true);
 
         Trainer trainer = new Trainer();
@@ -84,7 +92,7 @@ public class TrainerServiceImpl extends AbstractUserService<Trainer> implements 
 
         trainerDAO.save(trainer);
         logger.info("Created trainer profile with username: {}", username);
-        return trainer;
+        return new UserCredentialsResponse(username, password);
     }
 
     @Override
@@ -92,14 +100,10 @@ public class TrainerServiceImpl extends AbstractUserService<Trainer> implements 
         Optional<Trainer> trainerOpt = trainerDAO.findByUsername(username);
         if (trainerOpt.isPresent()) {
             Trainer trainer = trainerOpt.get();
-            if (trainer.getUser().getPassword().equals(oldPassword)) {
-                trainer.getUser().setPassword(newPassword);
-                trainerDAO.update(trainer);
-                logger.info("Password changed for trainer: {}", username);
-            } else {
-                logger.warn("Password change failed - incorrect old password for trainer: {}", username);
-                throw new SecurityException("Incorrect old password");
-            }
+            validateCredentials(new Credentials(username, oldPassword));
+            trainer.getUser().setPassword(passwordEncoder.encode(newPassword));
+            trainerDAO.update(trainer);
+            logger.info("Password changed for trainer: {}", username);
         } else {
             logger.warn("Password change failed - trainer not found: {}", username);
             throw new IllegalArgumentException("Trainer not found");
@@ -125,6 +129,7 @@ public class TrainerServiceImpl extends AbstractUserService<Trainer> implements 
 
     @Override
     public void updateStatus(Credentials credentials) {
+        validateCredentials(credentials);
         String username = credentials.getUsername();
 
         Trainer trainer = trainerDAO.findByUsername(username)
