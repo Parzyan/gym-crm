@@ -138,32 +138,6 @@ class TraineeServiceImplTest {
     }
 
     @Test
-    void updateTraineeTrainers_Success() {
-        Trainer trainer1 = new Trainer();
-        trainer1.setId(1L);
-        Trainer trainer2 = new Trainer();
-        trainer2.setId(2L);
-
-        when(traineeDAO.findByUsername("test.user")).thenReturn(Optional.of(testTrainee));
-        when(trainerDAO.findById(1L)).thenReturn(Optional.of(trainer1));
-        when(trainerDAO.findById(2L)).thenReturn(Optional.of(trainer2));
-
-        traineeService.updateTraineeTrainers(validCredentials, Set.of(1L, 2L));
-
-        assertEquals(2, testTrainee.getTrainers().size());
-        verify(traineeDAO).update(testTrainee);
-    }
-
-    @Test
-    void updateTraineeTrainers_TrainerNotFound() {
-        when(traineeDAO.findByUsername("test.user")).thenReturn(Optional.of(testTrainee));
-        when(trainerDAO.findById(1L)).thenReturn(Optional.empty());
-
-        assertThrows(IllegalArgumentException.class,
-                () -> traineeService.updateTraineeTrainers(validCredentials, Set.of(1L)));
-    }
-
-    @Test
     void getTraineeProfileById_Success() {
         when(traineeDAO.findById(1L)).thenReturn(Optional.of(testTrainee));
 

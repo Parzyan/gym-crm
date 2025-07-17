@@ -4,7 +4,7 @@ import com.company.gym.dto.request.AuthenticationRequest;
 import com.company.gym.dto.request.ChangePasswordRequest;
 import com.company.gym.dto.response.AuthenticationResponse;
 import com.company.gym.security.JwtUtil;
-import com.company.gym.security.LoginAttemptService;
+import com.company.gym.service.LoginAttemptService;
 import com.company.gym.service.TraineeService;
 import com.company.gym.service.TrainerService;
 import jakarta.servlet.http.HttpServletRequest;

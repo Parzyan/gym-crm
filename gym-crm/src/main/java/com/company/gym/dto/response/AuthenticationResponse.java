@@ -1,7 +1,7 @@
 package com.company.gym.dto.response;
 
 public class AuthenticationResponse {
-    String jwt;
+    private String jwt;
 
     public AuthenticationResponse(String jwt) {
         this.jwt = jwt;

@@ -1,4 +1,4 @@
-package com.company.gym.security;
+package com.company.gym.service;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
@@ -21,11 +21,9 @@ public class LoginAttemptService {
                 .build(key -> 0);
     }
 
-    public void loginFailed(String key) {
-        int attempts = attemptsCache.get(key);
-        attempts++;
+    public void recordFailedAttempt (String key) {
+        Integer attempts = attemptsCache.asMap().compute(key, (k, v) -> (v == null) ? 1 : v + 1);
         logger.info("Failed login attempt for IP: {}. Attempt count is now: {}", key, attempts);
-        attemptsCache.put(key, attempts);
     }
 
     public boolean isBlocked(String key) {
@@ -40,7 +38,7 @@ public class LoginAttemptService {
         }
     }
 
-    public void loginSucceeded(String key) {
+    public void resetAttempts (String key) {
         logger.info("Successful login for IP: {}. Resetting failed attempts count.", key);
         attemptsCache.invalidate(key);
     }

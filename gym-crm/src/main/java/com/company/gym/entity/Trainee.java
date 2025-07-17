@@ -1,6 +1,5 @@
 package com.company.gym.entity;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.persistence.*;
 
 import java.util.*;
@@ -26,14 +25,6 @@ public class Trainee implements UserContainer {
             cascade = CascadeType.ALL,
             orphanRemoval = true)
     private List<Training> trainings = new ArrayList<>();
-
-    @ManyToMany
-    @JoinTable(
-            name = "trainee_trainer",
-            joinColumns = @JoinColumn(name = "trainee_id"),
-            inverseJoinColumns = @JoinColumn(name = "trainer_id")
-    )
-    private Set<Trainer> trainers = new HashSet<>();
 
     public Trainee() {
     }
@@ -74,14 +65,6 @@ public class Trainee implements UserContainer {
 
     public void setAddress(String address) {
         this.address = address;
-    }
-
-    public Set<Trainer> getTrainers() {
-        return trainers;
-    }
-
-    public void setTrainers(Set<Trainer> trainers) {
-        this.trainers = trainers;
     }
 
     public List<Training> getTrainings() {

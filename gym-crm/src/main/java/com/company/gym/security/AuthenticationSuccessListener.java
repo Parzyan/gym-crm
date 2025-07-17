@@ -1,5 +1,6 @@
 package com.company.gym.security;
 
+import com.company.gym.service.LoginAttemptService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationListener;
 import org.springframework.security.authentication.event.AuthenticationSuccessEvent;
@@ -18,7 +19,7 @@ public class AuthenticationSuccessListener implements ApplicationListener<Authen
         if (details instanceof WebAuthenticationDetails) {
             String clientIp = ((WebAuthenticationDetails) details).getRemoteAddress();
             if (clientIp != null) {
-                loginAttemptService.loginSucceeded(clientIp);
+                loginAttemptService.resetAttempts(clientIp);
             }
         }
     }

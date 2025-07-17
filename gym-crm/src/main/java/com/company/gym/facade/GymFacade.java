@@ -49,10 +49,6 @@ public class GymFacade {
         traineeServiceImpl.updateStatus(credentials);
     }
 
-    public void updateTraineeTrainers(Credentials credentials, Set<Long> trainerIds) {
-        traineeServiceImpl.updateTraineeTrainers(credentials, trainerIds);
-    }
-
     public Optional<Trainee> getTrainee(Long id) {
         return traineeServiceImpl.getById(id);
     }

@@ -1,5 +1,6 @@
 package com.company.gym.security;
 
+import com.company.gym.service.LoginAttemptService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationListener;
@@ -22,7 +23,7 @@ public class AuthenticationFailureListener implements ApplicationListener<Authen
         if (details instanceof WebAuthenticationDetails) {
             String clientIp = ((WebAuthenticationDetails) details).getRemoteAddress();
             if (clientIp != null) {
-                loginAttemptService.loginFailed(clientIp);
+                loginAttemptService.recordFailedAttempt(clientIp);
             }
         }
     }

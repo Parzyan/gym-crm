@@ -1,7 +1,7 @@
 package com.company.gym.exception;
 
 import com.company.gym.dto.response.ApiErrorResponse;
-import com.company.gym.security.LoginAttemptService;
+import com.company.gym.service.LoginAttemptService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,8 +21,7 @@ public class RestExceptionHandler {
     @Autowired
     private LoginAttemptService loginAttemptService;
 
-    private static final String ACCOUNT_DISABLED_MESSAGE = "This user account has been disabled.";
-    private static final String UNAUTHORIZED_MESSAGE = "Authentication failed. Please check your credentials.";
+    private static final String GENERIC_AUTH_FAILURE_MESSAGE = "Authentication failed. Please check your credentials or contact support if the issue persists.";
     private static final String NOT_FOUND_MESSAGE = "The requested resource could not be found.";
     private static final String BAD_REQUEST_MESSAGE = "The request is invalid. Please check the provided input.";
     private static final String INTERNAL_SERVER_ERROR_MESSAGE = "An unexpected internal server error has occurred. Please try again later.";
@@ -32,12 +31,9 @@ public class RestExceptionHandler {
     protected ResponseEntity<ApiErrorResponse> handleBadCredentials(Exception ex, HttpServletRequest request) {
         log.warn("Authentication failure: {}", ex.getMessage());
 
-        final String clientIp = getClientIP(request);
-        loginAttemptService.loginFailed(clientIp);
-
         ApiErrorResponse apiError = new ApiErrorResponse(
                 "Unauthorized",
-                UNAUTHORIZED_MESSAGE
+                GENERIC_AUTH_FAILURE_MESSAGE
         );
         return new ResponseEntity<>(apiError, HttpStatus.UNAUTHORIZED);
     }
@@ -48,7 +44,7 @@ public class RestExceptionHandler {
         log.warn("Login attempt for disabled account: {}", ex.getMessage());
         ApiErrorResponse apiError = new ApiErrorResponse(
                 "Forbidden",
-                ACCOUNT_DISABLED_MESSAGE
+                GENERIC_AUTH_FAILURE_MESSAGE
         );
         return new ResponseEntity<>(apiError, HttpStatus.FORBIDDEN);
     }

@@ -1,5 +1,6 @@
 package com.company.gym.security;
 
+import com.company.gym.service.LoginAttemptService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -20,7 +21,7 @@ class LoginAttemptServiceTest {
     @Test
     @DisplayName("isBlocked should be false after one failed attempt")
     void isBlocked_AfterOneFailure() {
-        loginAttemptService.loginFailed(TEST_IP);
+        loginAttemptService.recordFailedAttempt(TEST_IP);
 
         assertFalse(loginAttemptService.isBlocked(TEST_IP), "IP should not be blocked after one attempt.");
     }
@@ -28,8 +29,8 @@ class LoginAttemptServiceTest {
     @Test
     @DisplayName("isBlocked should be false after two failed attempts")
     void isBlocked_AfterTwoFailures() {
-        loginAttemptService.loginFailed(TEST_IP);
-        loginAttemptService.loginFailed(TEST_IP);
+        loginAttemptService.recordFailedAttempt(TEST_IP);
+        loginAttemptService.recordFailedAttempt(TEST_IP);
 
         assertFalse(loginAttemptService.isBlocked(TEST_IP), "IP should not be blocked after two attempts.");
     }
@@ -37,9 +38,9 @@ class LoginAttemptServiceTest {
     @Test
     @DisplayName("isBlocked should be true after three failed attempts")
     void isBlocked_AfterThreeFailures() {
-        loginAttemptService.loginFailed(TEST_IP);
-        loginAttemptService.loginFailed(TEST_IP);
-        loginAttemptService.loginFailed(TEST_IP);
+        loginAttemptService.recordFailedAttempt(TEST_IP);
+        loginAttemptService.recordFailedAttempt(TEST_IP);
+        loginAttemptService.recordFailedAttempt(TEST_IP);
 
         assertTrue(loginAttemptService.isBlocked(TEST_IP), "IP should be blocked after three attempts.");
     }
@@ -47,12 +48,12 @@ class LoginAttemptServiceTest {
     @Test
     @DisplayName("isBlocked should become false after a successful login")
     void isBlocked_AfterSuccess() {
-        loginAttemptService.loginFailed(TEST_IP);
-        loginAttemptService.loginFailed(TEST_IP);
-        loginAttemptService.loginFailed(TEST_IP);
+        loginAttemptService.recordFailedAttempt(TEST_IP);
+        loginAttemptService.recordFailedAttempt(TEST_IP);
+        loginAttemptService.recordFailedAttempt(TEST_IP);
         assertTrue(loginAttemptService.isBlocked(TEST_IP), "Precondition failed: IP was not blocked.");
 
-        loginAttemptService.loginSucceeded(TEST_IP);
+        loginAttemptService.resetAttempts(TEST_IP);
 
         assertFalse(loginAttemptService.isBlocked(TEST_IP), "IP should be unblocked after a successful login.");
     }

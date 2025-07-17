@@ -163,21 +163,6 @@ public class TraineeServiceImpl extends AbstractUserService<Trainee> implements 
     }
 
     @Override
-    public void updateTraineeTrainers(Credentials credentials, Set<Long> trainerIds) {
-        String traineeUsername = credentials.getUsername();
-        Trainee trainee = traineeDAO.findByUsername(traineeUsername)
-                .orElseThrow(() -> new IllegalArgumentException("Trainee not found"));
-
-        Set<Trainer> trainers = trainerIds.stream()
-                .map(id -> trainerDAO.findById(id)
-                        .orElseThrow(() -> new IllegalArgumentException("Trainer not found: " + id)))
-                .collect(Collectors.toSet());
-
-        trainee.setTrainers(trainers);
-        traineeDAO.update(trainee);
-    }
-
-    @Override
     public List<Trainer> getTrainersForTrainee(String traineeUsername) {
         Trainee trainee = traineeDAO.findByUsername(traineeUsername)
                 .orElseThrow(() -> new EntityNotFoundException("Trainee not found with username: " + traineeUsername));

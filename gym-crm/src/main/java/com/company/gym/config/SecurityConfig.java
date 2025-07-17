@@ -1,7 +1,7 @@
 package com.company.gym.config;
 
 import com.company.gym.security.JwtRequestFilter;
-import com.company.gym.security.LoginAttemptService;
+import com.company.gym.service.LoginAttemptService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
