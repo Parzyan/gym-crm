@@ -100,7 +100,6 @@ public class TrainerServiceImpl extends AbstractUserService<Trainer> implements 
         Optional<Trainer> trainerOpt = trainerDAO.findByUsername(username);
         if (trainerOpt.isPresent()) {
             Trainer trainer = trainerOpt.get();
-            validateCredentials(new Credentials(username, oldPassword));
             trainer.getUser().setPassword(passwordEncoder.encode(newPassword));
             trainerDAO.update(trainer);
             logger.info("Password changed for trainer: {}", username);

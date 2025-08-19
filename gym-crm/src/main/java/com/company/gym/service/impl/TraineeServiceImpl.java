@@ -96,7 +96,6 @@ public class TraineeServiceImpl extends AbstractUserService<Trainee> implements 
         Optional<Trainee> traineeOpt = traineeDAO.findByUsername(username);
         if (traineeOpt.isPresent()) {
             Trainee trainee = traineeOpt.get();
-            validateCredentials(new Credentials(username, oldPassword));
             trainee.getUser().setPassword(passwordEncoder.encode(newPassword));
             traineeDAO.update(trainee);
             logger.info("Password changed for trainee: {}", username);

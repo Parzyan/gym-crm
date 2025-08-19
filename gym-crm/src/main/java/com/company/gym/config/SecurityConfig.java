@@ -50,7 +50,7 @@ public class SecurityConfig {
                 .cors(withDefaults())
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/login", "/trainees/register", "/trainers/register", "trainings/types", "auth/change-password", "trainees/status", "trainers/status",
+                        .requestMatchers("/auth/login", "/trainees/register", "/trainers/register", "trainings/types", "trainees/status", "trainers/status",
                                 "/actuator/**", "/swagger-ui.html/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .anyRequest().authenticated()
                 )

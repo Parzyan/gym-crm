@@ -23,6 +23,7 @@ import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 
+import java.security.Principal;
 import java.util.ArrayList;
 import java.util.Objects;
 
@@ -63,8 +64,6 @@ class AuthControllerTest {
         authenticationRequest = new AuthenticationRequest("test.user", "password");
 
         changePasswordRequest = new ChangePasswordRequest();
-        changePasswordRequest.setUsername("test.user");
-        changePasswordRequest.setOldPassword("oldPass");
         changePasswordRequest.setNewPassword("newPass");
     }
 
@@ -87,40 +86,52 @@ class AuthControllerTest {
     @Test
     @DisplayName("Change Password should return 200 OK when user is a Trainee")
     void changePassword_userIsTrainee() {
-        doNothing().when(traineeService).changePassword(anyString(), anyString(), anyString());
+        Principal principal = mock(Principal.class);
+        when(principal.getName()).thenReturn("test.user");
 
-        ResponseEntity<Void> response = authController.changePassword(changePasswordRequest);
+        ChangePasswordRequest request = new ChangePasswordRequest();
+        request.setNewPassword("newPass");
+
+        doNothing().when(traineeService).changePassword(eq("test.user"), any(), eq("newPass"));
+
+        ResponseEntity<Void> response = authController.changePassword(principal, request);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
-
         verify(traineeService).changePassword(
                 eq("test.user"),
-                eq("oldPass"),
+                any(),
                 eq("newPass")
         );
-        verify(trainerService, never()).changePassword(anyString(), anyString(), anyString());
+        verify(trainerService, never()).changePassword(anyString(), any(), anyString());
     }
 
     @Test
     @DisplayName("Change Password should return 200 OK when user is a Trainer")
     void changePassword_userIsTrainer() {
-        doThrow(new SecurityException("Trainee not found"))
-                .when(traineeService).changePassword(anyString(), anyString(), anyString());
-        doNothing().when(trainerService).changePassword(anyString(), anyString(), anyString());
+        Principal principal = mock(Principal.class);
+        when(principal.getName()).thenReturn("test.user");
 
-        ResponseEntity<Void> response = authController.changePassword(changePasswordRequest);
+        ChangePasswordRequest request = new ChangePasswordRequest();
+        request.setNewPassword("newPass");
+
+        doThrow(new SecurityException("Trainee not found"))
+                .when(traineeService).changePassword(eq("test.user"), any(), eq("newPass"));
+        doNothing().when(trainerService).changePassword(eq("test.user"), any(), eq("newPass"));
+
+        ResponseEntity<Void> response = authController.changePassword(principal, request);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
 
         verify(traineeService).changePassword(
                 eq("test.user"),
-                eq("oldPass"),
+                any(),
                 eq("newPass")
         );
         verify(trainerService).changePassword(
                 eq("test.user"),
-                eq("oldPass"),
+                any(),
                 eq("newPass")
         );
     }
+
 }

@@ -86,22 +86,12 @@ class TraineeServiceImplTest {
     @Test
     void changePassword_Success() {
         when(traineeDAO.findByUsername("test.user")).thenReturn(Optional.of(testTrainee));
-        doNothing().when(authenticationService).authenticate(any());
         when(passwordEncoder.encode("newPassword")).thenReturn("encodedNewPassword");
 
         traineeService.changePassword("test.user", "oldPassword", "newPassword");
 
         assertEquals("encodedNewPassword", testTrainee.getUser().getPassword());
         verify(traineeDAO).update(testTrainee);
-    }
-
-    @Test
-    void changePassword_PasswordIncorrect() {
-        when(traineeDAO.findByUsername("test.user")).thenReturn(Optional.of(testTrainee));
-        doThrow(SecurityException.class).when(authenticationService).authenticate(any());
-
-        assertThrows(SecurityException.class,
-                () -> traineeService.changePassword("test.user", "wrongPassword", "newPassword"));
     }
 
     @Test

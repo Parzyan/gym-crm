@@ -25,6 +25,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
+import java.security.Principal;
+
 @Tag(name = "Authentication", description = "Operations for user login and password management")
 @RestController
 @RequestMapping("/auth")
@@ -73,18 +75,20 @@ public class AuthController {
     @Operation(summary = "Change a user's login password", description = "Allows a user to change their password after providing the old one.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Password changed successfully"),
-            @ApiResponse(responseCode = "401", description = "Unauthorized - Incorrect old password or user not found")
+            @ApiResponse(responseCode = "403", description = "Unauthorized - Incorrect old password or user not found")
     })
     @PutMapping("/change-password")
-    public ResponseEntity<Void> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
+    public ResponseEntity<Void> changePassword(Principal principal,
+                                               @Valid @RequestBody ChangePasswordRequest request) {
+        String username = principal.getName();
         try {
-            traineeService.changePassword(request.getUsername(), request.getOldPassword(), request.getNewPassword());
-            logger.info("Password successfully changed for trainee: {}", request.getUsername());
+            traineeService.changePassword(username, "", request.getNewPassword());
+            logger.info("Password successfully changed for trainee: {}", username);
         } catch (SecurityException e) {
-            logger.debug("Could not change password for user {} as a trainee. Trying as a trainer.", request.getUsername());
+            logger.debug("Could not change password for user {} as a trainee. Trying as a trainer.", username);
 
-            trainerService.changePassword(request.getUsername(), request.getOldPassword(), request.getNewPassword());
-            logger.info("Password successfully changed for trainer: {}", request.getUsername());
+            trainerService.changePassword(username, "", request.getNewPassword());
+            logger.info("Password successfully changed for trainer: {}", username);
         }
         return ResponseEntity.ok().build();
     }
