@@ -20,6 +20,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
+import java.security.Principal;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
@@ -40,6 +41,9 @@ class TrainingControllerTest {
 
     @Mock
     private TrainingTypeService trainingTypeService;
+
+    @Mock
+    Principal principal;
 
     private TrainingController trainingController;
 
@@ -79,10 +83,7 @@ class TrainingControllerTest {
         testTraining.setTrainer(testTrainer);
 
         addTrainingRequest = new AddTrainingRequest();
-        addTrainingRequest.setTraineeUsername("john.doe");
-        addTrainingRequest.setTraineePassword("password123");
         addTrainingRequest.setTrainerUsername("jane.trainer");
-        addTrainingRequest.setTrainerPassword("trainer123");
         addTrainingRequest.setTrainingName("Morning Session");
         addTrainingRequest.setTrainingTypeName("Cardio");
         addTrainingRequest.setTrainingDate(new Date());
@@ -94,12 +95,14 @@ class TrainingControllerTest {
     @Test
     @DisplayName("Get Trainee Trainings should return 200 OK with filtered results")
     void getTraineeTrainings_onSuccess() {
-        when(trainingService.getTraineeTrainings(any(Credentials.class), any(), any(), any(), any()))
+        String username = "john.doe";
+        when(principal.getName()).thenReturn(username);
+        when(trainingService.getTraineeTrainings(any(), any(), any(), any(), any()))
                 .thenReturn(Collections.singletonList(testTraining));
         when(trainingTypeDAO.findByName("Cardio")).thenReturn(Optional.of(testTrainingType));
 
         ResponseEntity<List<TraineeTrainingResponse>> response = trainingController.getTraineeTrainings(
-                "john.doe", null, null, null, "Cardio");
+                principal, null, null, null, "Cardio");
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
@@ -121,19 +124,22 @@ class TrainingControllerTest {
     @Test
     @DisplayName("Get Trainee Trainings should throw EntityNotFoundException for invalid training type")
     void getTraineeTrainings_invalidTrainingType() {
+        when(principal.getName()).thenReturn("john.doe");
         when(trainingTypeDAO.findByName("InvalidType")).thenReturn(Optional.empty());
 
-        assertThrows(EntityNotFoundException.class, () -> trainingController.getTraineeTrainings("john.doe", null, null, null, "InvalidType"));
+        assertThrows(EntityNotFoundException.class, () -> trainingController.getTraineeTrainings(principal, null, null, null, "InvalidType"));
     }
 
     @Test
     @DisplayName("Get Trainer Trainings should return 200 OK with filtered results")
     void getTrainerTrainings_onSuccess() {
-        when(trainingService.getTrainerTrainings(any(Credentials.class), any(), any(), any()))
+        String username = "jane.trainer";
+        when(principal.getName()).thenReturn(username);
+        when(trainingService.getTrainerTrainings(any(), any(), any(), any()))
                 .thenReturn(Collections.singletonList(testTraining));
 
         ResponseEntity<List<TrainerTrainingResponse>> response = trainingController.getTrainerTrainings(
-                "jane.trainer", null, null, null);
+                principal, null, null, null);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
@@ -154,21 +160,30 @@ class TrainingControllerTest {
     @Test
     @DisplayName("Add Training should return 200 OK on success")
     void addTraining_onSuccess() {
+        String traineeUsername = "john.doe";
+        when(principal.getName()).thenReturn(traineeUsername);
+
+        AddTrainingRequest createRequest = new AddTrainingRequest(
+                "jane.trainer",
+                "Morning Session",
+                "Cardio",
+                new Date(),
+                60
+        );
+
         when(trainingTypeDAO.findByName("Cardio")).thenReturn(Optional.of(testTrainingType));
-        when(trainingService.createTraining(any(), any(), any(), any(), any(), any()))
+        when(trainingService.createTraining(any(), any(), anyString(), any(), any(Date.class), anyInt()))
                 .thenReturn(testTraining);
 
-        ResponseEntity<Void> response = trainingController.addTraining(addTrainingRequest);
+        ResponseEntity<Void> response = trainingController.addTraining(principal, createRequest);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         verify(trainingService).createTraining(
                 argThat(creds ->
-                        creds.getUsername().equals("john.doe") &&
-                                creds.getPassword().equals("password123")
+                        creds.getUsername().equals("john.doe")
                 ),
                 argThat(creds ->
-                        creds.getUsername().equals("jane.trainer") &&
-                                creds.getPassword().equals("trainer123")
+                        creds.getUsername().equals("jane.trainer")
                 ),
                 eq("Morning Session"),
                 eq(1L),

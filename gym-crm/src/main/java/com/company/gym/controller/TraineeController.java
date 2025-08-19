@@ -28,6 +28,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.micrometer.core.instrument.*;
 
+import java.security.Principal;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -80,7 +81,7 @@ public class TraineeController {
     })
     @PostMapping("/register")
     public ResponseEntity<UserCredentialsResponse> registerTrainee(@Valid @RequestBody TraineeRegistrationRequest request) {
-        Trainee newTrainee = traineeService.createTraineeProfile(
+        UserCredentialsResponse response = traineeService.createTraineeProfile(
                 request.getFirstName(),
                 request.getLastName(),
                 request.getDateOfBirth(),
@@ -88,11 +89,6 @@ public class TraineeController {
         );
 
         registrationCounter.increment();
-
-        UserCredentialsResponse response = new UserCredentialsResponse(
-                newTrainee.getUser().getUsername(),
-                newTrainee.getUser().getPassword()
-        );
 
         logger.info("Successfully registered trainee. Username: {}", response.getUsername());
         return new ResponseEntity<>(response, HttpStatus.CREATED);
@@ -106,8 +102,8 @@ public class TraineeController {
             @ApiResponse(responseCode = "500", description = "Internal Server Error")
     })
     @GetMapping("/profile")
-    public ResponseEntity<TraineeProfileResponse> getTraineeProfile(
-            @RequestAttribute("authenticatedUsername") String username) {
+    public ResponseEntity<TraineeProfileResponse> getTraineeProfile(Principal principal) {
+        String username = principal.getName();
         Trainee trainee = traineeService.getByUsername(username)
                 .orElseThrow(() -> new EntityNotFoundException("Trainee with username '" + username + "' not found."));
 
@@ -127,9 +123,9 @@ public class TraineeController {
     })
     @PutMapping("/profile")
     public ResponseEntity<TraineeProfileResponse> updateTraineeProfile(
-            @RequestAttribute("authenticatedUsername") String username,
+            Principal principal,
             @Valid @RequestBody UpdateTraineeProfileRequest request) {
-
+        String username = principal.getName();
         return profileUpdateTimer.record(() -> {
             Trainee updatedTrainee = traineeService.updateTraineeProfile(
                     new Credentials(username, null),
@@ -159,7 +155,8 @@ public class TraineeController {
     })
     @DeleteMapping("/profile")
     public ResponseEntity<Void> deleteTraineeProfile(
-            @RequestAttribute("authenticatedUsername") String username) {
+            Principal principal) {
+        String username = principal.getName();
         traineeService.deleteTraineeProfile(new Credentials(username, null));
 
         profileDeleteCounter.increment();
@@ -175,7 +172,8 @@ public class TraineeController {
     })
     @GetMapping("/unassigned-trainers")
     public ResponseEntity<List<UnassignedTrainerResponse>> getUnassignedTrainers(
-            @RequestAttribute("authenticatedUsername") String username) {
+            Principal principal) {
+        String username = principal.getName();
         List<Trainer> unassignedTrainers = trainerService.getUnassignedTrainers(username);
 
         List<UnassignedTrainerResponse> response = unassignedTrainers.stream()
@@ -204,9 +202,9 @@ public class TraineeController {
     })
     @PatchMapping("/trainers")
     public ResponseEntity<UpdatedTrainersListResponse> updateTrainingTrainers(
-            @RequestAttribute("authenticatedUsername") String username,
+            Principal principal,
             @Valid @RequestBody UpdateTraineeTrainersRequest request) {
-
+        String username = principal.getName();
         List<Trainer> updatedTrainers = traineeService.updateTrainingTrainers(
                 new Credentials(username, null),
                 request.getUpdates()

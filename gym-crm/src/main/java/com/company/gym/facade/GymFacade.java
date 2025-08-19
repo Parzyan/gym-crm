@@ -1,5 +1,6 @@
 package com.company.gym.facade;
 
+import com.company.gym.dto.response.UserCredentialsResponse;
 import com.company.gym.entity.Credentials;
 import com.company.gym.entity.Trainee;
 import com.company.gym.entity.Trainer;
@@ -28,7 +29,7 @@ public class GymFacade {
         this.trainingServiceImpl = trainingServiceImpl;
     }
 
-    public Trainee createTrainee(String firstName, String lastName, Date dateOfBirth, String address) {
+    public UserCredentialsResponse createTrainee(String firstName, String lastName, Date dateOfBirth, String address) {
         return traineeServiceImpl.createTraineeProfile(firstName, lastName, dateOfBirth, address);
     }
 
@@ -48,10 +49,6 @@ public class GymFacade {
         traineeServiceImpl.updateStatus(credentials);
     }
 
-    public void updateTraineeTrainers(Credentials credentials, Set<Long> trainerIds) {
-        traineeServiceImpl.updateTraineeTrainers(credentials, trainerIds);
-    }
-
     public Optional<Trainee> getTrainee(Long id) {
         return traineeServiceImpl.getById(id);
     }
@@ -60,7 +57,7 @@ public class GymFacade {
         return traineeServiceImpl.getAll();
     }
 
-    public Trainer createTrainer(String firstName, String lastName, Long specializationId) {
+    public UserCredentialsResponse createTrainer(String firstName, String lastName, Long specializationId) {
         return trainerServiceImpl.createTrainerProfile(firstName, lastName, specializationId);
     }
 

@@ -8,6 +8,7 @@ import java.util.*;
 import com.company.gym.dao.TraineeDAO;
 import com.company.gym.dao.TrainerDAO;
 import com.company.gym.dao.TrainingTypeDAO;
+import com.company.gym.dto.response.UserCredentialsResponse;
 import com.company.gym.entity.*;
 import com.company.gym.service.impl.AuthenticationServiceImpl;
 import com.company.gym.service.impl.TrainerServiceImpl;
@@ -20,6 +21,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 @ExtendWith(MockitoExtension.class)
 class TrainerServiceImplTest {
@@ -36,6 +38,8 @@ class TrainerServiceImplTest {
     private PasswordGenerator passwordGenerator;
     @Mock
     private AuthenticationServiceImpl authenticationService;
+    @Mock
+    private PasswordEncoder passwordEncoder;
 
     @InjectMocks
     private TrainerServiceImpl trainerService;
@@ -70,12 +74,11 @@ class TrainerServiceImplTest {
         when(passwordGenerator.generatePassword()).thenReturn("generatedPassword");
         when(trainingTypeDAO.findById(1L)).thenReturn(Optional.of(testTrainingType));
 
-        Trainer result = trainerService.createTrainerProfile("John", "Smith", 1L);
+        UserCredentialsResponse result = trainerService.createTrainerProfile("John", "Smith", 1L);
 
         assertNotNull(result);
-        assertEquals("John.Smith", result.getUser().getUsername());
-        assertEquals("generatedPassword", result.getUser().getPassword());
-        assertEquals(testTrainingType, result.getSpecialization());
+        assertEquals("John.Smith", result.getUsername());
+        assertEquals("generatedPassword", result.getPassword());
         verify(trainerDAO).save(any(Trainer.class));
     }
 
@@ -98,19 +101,12 @@ class TrainerServiceImplTest {
     @Test
     void changePassword_Success() {
         when(trainerDAO.findByUsername("test.trainer")).thenReturn(Optional.of(testTrainer));
+        when(passwordEncoder.encode("newPassword")).thenReturn("encodedNewPassword");
 
         trainerService.changePassword("test.trainer", "oldPassword", "newPassword");
 
-        assertEquals("newPassword", testTrainer.getUser().getPassword());
+        assertEquals("encodedNewPassword", testTrainer.getUser().getPassword());
         verify(trainerDAO).update(testTrainer);
-    }
-
-    @Test
-    void changePassword_PasswordIncorrect() {
-        when(trainerDAO.findByUsername("test.trainer")).thenReturn(Optional.of(testTrainer));
-
-        assertThrows(SecurityException.class,
-                () -> trainerService.changePassword("test.trainer", "wrongPassword", "newPassword"));
     }
 
     @Test

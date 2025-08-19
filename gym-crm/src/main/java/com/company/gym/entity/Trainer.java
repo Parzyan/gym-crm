@@ -3,9 +3,7 @@ package com.company.gym.entity;
 import jakarta.persistence.*;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 @Entity
 @Table(name = "trainers")
@@ -26,9 +24,6 @@ public class Trainer implements UserContainer {
             cascade = CascadeType.ALL,
             orphanRemoval = true)
     private List<Training> trainings = new ArrayList<>();
-
-    @ManyToMany(mappedBy = "trainers")
-    private Set<Trainee> trainees = new HashSet<>();
 
     public Trainer() {
     }
@@ -60,14 +55,6 @@ public class Trainer implements UserContainer {
 
     public void setSpecialization(TrainingType specialization) {
         this.specialization = specialization;
-    }
-
-    public Set<Trainee> getTrainees() {
-        return trainees;
-    }
-
-    public void setTrainees(Set<Trainee> trainees) {
-        this.trainees = trainees;
     }
 
     public List<Training> getTrainings() {

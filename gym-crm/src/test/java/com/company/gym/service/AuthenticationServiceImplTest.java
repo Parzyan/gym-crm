@@ -17,6 +17,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.Logger;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Optional;
 
@@ -26,25 +27,22 @@ class AuthenticationServiceImplTest {
     @Mock
     private UserDAOImpl userDAO;
 
+    @Mock
+    private PasswordEncoder passwordEncoder;
+
     @InjectMocks
     private AuthenticationServiceImpl authenticationService;
 
-    private User activeUser;
-    private User inactiveUser;
+    private User testUser;
     private Credentials validCredentials;
     private Credentials invalidCredentials;
 
     @BeforeEach
     void setUp() {
-        activeUser = new User();
-        activeUser.setUsername("john.doe");
-        activeUser.setPassword("password123");
-        activeUser.setIsActive(true);
-
-        inactiveUser = new User();
-        inactiveUser.setUsername("jane.doe");
-        inactiveUser.setPassword("password456");
-        inactiveUser.setIsActive(false);
+        testUser = new User();
+        testUser.setUsername("john.doe");
+        testUser.setPassword("password123");
+        testUser.setIsActive(true);
 
         validCredentials = new Credentials("john.doe", "password123");
         invalidCredentials = new Credentials("unknown.user", "wrongpass");
@@ -53,7 +51,8 @@ class AuthenticationServiceImplTest {
     @Test
     @DisplayName("Authenticate should succeed with valid credentials")
     void authenticate_success() {
-        when(userDAO.findByUsername("john.doe")).thenReturn(Optional.of(activeUser));
+        when(userDAO.findByUsername("john.doe")).thenReturn(Optional.of(testUser));
+        when(passwordEncoder.matches(validCredentials.getPassword(), testUser.getPassword())).thenReturn(true);
 
         assertDoesNotThrow(() -> authenticationService.authenticate(validCredentials));
         verify(userDAO, times(1)).findByUsername("john.doe");
@@ -69,18 +68,6 @@ class AuthenticationServiceImplTest {
 
         assertEquals("Invalid username or password", exception.getMessage());
         verify(userDAO, times(1)).findByUsername("unknown.user");
-    }
-
-    @Test
-    @DisplayName("Authenticate should throw InactiveUserException for inactive user")
-    void authenticate_inactiveUser() {
-        when(userDAO.findByUsername("jane.doe")).thenReturn(Optional.of(inactiveUser));
-
-        InactiveUserException exception = assertThrows(InactiveUserException.class,
-                () -> authenticationService.authenticate(new Credentials("jane.doe", "password456")));
-
-        assertEquals("User is not active", exception.getMessage());
-        verify(userDAO, times(1)).findByUsername("jane.doe");
     }
 
     @Test

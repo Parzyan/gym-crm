@@ -19,6 +19,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
+import java.security.Principal;
 import java.util.Collections;
 import java.util.Optional;
 
@@ -33,12 +34,16 @@ class TrainerControllerTest {
     @Mock
     private TrainerService trainerService;
 
+    @Mock
+    Principal principal;
+
     private TrainerController trainerController;
 
     private Trainer testTrainer;
     private TrainerRegistrationRequest registrationRequest;
     private UpdateTrainerProfileRequest updateProfileRequest;
     private UpdateActiveStatusRequest statusRequest;
+    private final String TEST_USERNAME = "jane.trainer";
 
     @BeforeEach
     void setUp() {
@@ -96,7 +101,8 @@ class TrainerControllerTest {
     @Test
     @DisplayName("Register Trainer should return 201 Created on success")
     void registerTrainer_onSuccess() {
-        when(trainerService.createTrainerProfile(anyString(), anyString(), anyLong())).thenReturn(testTrainer);
+        UserCredentialsResponse credentials = new UserCredentialsResponse(TEST_USERNAME, "password");
+        when(trainerService.createTrainerProfile(anyString(), anyString(), anyLong())).thenReturn(credentials);
 
         ResponseEntity<UserCredentialsResponse> response = trainerController.registerTrainer(registrationRequest);
 
@@ -123,9 +129,10 @@ class TrainerControllerTest {
     @Test
     @DisplayName("Get Trainer Profile should return 200 OK")
     void getTrainerProfile_onSuccess() {
-        when(trainerService.getByUsername("jane.trainer")).thenReturn(Optional.of(testTrainer));
+        when(principal.getName()).thenReturn(TEST_USERNAME);
+        when(trainerService.getByUsername(TEST_USERNAME)).thenReturn(Optional.of(testTrainer));
 
-        ResponseEntity<TrainerProfileResponse> response = trainerController.getTrainerProfile("jane.trainer");
+        ResponseEntity<TrainerProfileResponse> response = trainerController.getTrainerProfile(principal);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
@@ -136,21 +143,23 @@ class TrainerControllerTest {
     @Test
     @DisplayName("Get Trainer Profile should throw EntityNotFoundException if trainer does not exist")
     void getTrainerProfile_trainerNotFound() {
-        when(trainerService.getByUsername("jane.trainer")).thenReturn(Optional.empty());
+        when(principal.getName()).thenReturn(TEST_USERNAME);
+        when(trainerService.getByUsername(TEST_USERNAME)).thenReturn(Optional.empty());
 
-        assertThrows(EntityNotFoundException.class, () -> trainerController.getTrainerProfile("jane.trainer"));
+        assertThrows(EntityNotFoundException.class, () -> trainerController.getTrainerProfile(principal));
     }
 
     @Test
     @DisplayName("Update Trainer Profile should return 200 OK on success")
     void updateTrainerProfile_onSuccess() {
+        when(principal.getName()).thenReturn(TEST_USERNAME);
         testTrainer.getUser().setIsActive(false);
 
-        when(trainerService.getByUsername("jane.trainer"))
+        when(trainerService.getByUsername(TEST_USERNAME))
                 .thenReturn(Optional.of(testTrainer))
                 .thenReturn(Optional.of(testTrainer));
 
-        ResponseEntity<TrainerProfileResponse> response = trainerController.updateTrainerProfile("jane.trainer", updateProfileRequest);
+        ResponseEntity<TrainerProfileResponse> response = trainerController.updateTrainerProfile(principal, updateProfileRequest);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
@@ -168,15 +177,16 @@ class TrainerControllerTest {
     @Test
     @DisplayName("Update Trainer Profile should throw EntityNotFoundException if trainer does not exist")
     void updateTrainerProfile_trainerNotFound() {
-        when(trainerService.getByUsername("jane.trainer")).thenReturn(Optional.empty());
+        when(principal.getName()).thenReturn(TEST_USERNAME);
+        when(trainerService.getByUsername(TEST_USERNAME)).thenReturn(Optional.empty());
 
-        assertThrows(EntityNotFoundException.class, () -> trainerController.updateTrainerProfile("jane.trainer", updateProfileRequest));
+        assertThrows(EntityNotFoundException.class, () -> trainerController.updateTrainerProfile(principal, updateProfileRequest));
     }
 
     @Test
     @DisplayName("Update Trainer Status should return 200 OK on success")
     void updateTrainerStatus_onSuccess() {
-        when(trainerService.getByUsername("jane.trainer")).thenReturn(Optional.of(testTrainer));
+        when(trainerService.getByUsername(TEST_USERNAME)).thenReturn(Optional.of(testTrainer));
         doNothing().when(trainerService).updateStatus(any(Credentials.class));
 
         ResponseEntity<Void> response = trainerController.updateTrainerStatus(statusRequest);
@@ -184,7 +194,7 @@ class TrainerControllerTest {
         assertEquals(HttpStatus.OK, response.getStatusCode());
         verify(trainerService, times(1)).updateStatus(
                 argThat(credentials ->
-                        credentials.getUsername().equals("jane.trainer") &&
+                        credentials.getUsername().equals(TEST_USERNAME) &&
                                 credentials.getPassword().equals("password123")
                 )
         );
@@ -193,7 +203,7 @@ class TrainerControllerTest {
     @Test
     @DisplayName("Update Trainer Status should throw EntityNotFoundException if trainer not found")
     void updateTrainerStatus_trainerNotFound() {
-        when(trainerService.getByUsername("jane.trainer")).thenReturn(Optional.empty());
+        when(trainerService.getByUsername(TEST_USERNAME)).thenReturn(Optional.empty());
 
         assertThrows(EntityNotFoundException.class, () -> trainerController.updateTrainerStatus(statusRequest));
     }

@@ -2,6 +2,8 @@ package com.company.gym.entity;
 
 import jakarta.persistence.*;
 
+import java.time.Instant;
+
 @Entity
 @Table(name = "users")
 @Inheritance(strategy = InheritanceType.JOINED)
@@ -82,6 +84,14 @@ public class User {
     }
 
     public void setIsActive(boolean active) {
+        isActive = active;
+    }
+
+    public boolean isActive() {
+        return isActive;
+    }
+
+    public void setActive(boolean active) {
         isActive = active;
     }
 }

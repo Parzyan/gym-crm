@@ -3,7 +3,9 @@ package com.company.gym.service.impl;
 import com.company.gym.dao.TrainingDAO;
 import com.company.gym.dao.impl.TraineeDAOImpl;
 import com.company.gym.dao.impl.TrainerDAOImpl;
+import com.company.gym.dao.impl.UserDAOImpl;
 import com.company.gym.dto.request.UpdateTraineeTrainersRequest;
+import com.company.gym.dto.response.UserCredentialsResponse;
 import com.company.gym.entity.*;
 import com.company.gym.exception.EntityNotFoundException;
 import com.company.gym.service.AbstractUserService;
@@ -14,6 +16,7 @@ import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -29,6 +32,7 @@ public class TraineeServiceImpl extends AbstractUserService<Trainee> implements 
     private TraineeDAOImpl traineeDAO;
     private TrainerDAOImpl trainerDAO;
     private TrainingDAO trainingDAO;
+    private PasswordEncoder passwordEncoder;
 
     @Autowired
     public void setTraineeDAO(TraineeDAOImpl traineeDAO) {
@@ -56,8 +60,13 @@ public class TraineeServiceImpl extends AbstractUserService<Trainee> implements 
         this.passwordGenerator = passwordGenerator;
     }
 
+    @Autowired
+    public void setPasswordEncoder(PasswordEncoder passwordEncoder) {
+        this.passwordEncoder = passwordEncoder;
+    }
+
     @Override
-    public Trainee createTraineeProfile(String firstName, String lastName, Date dateOfBirth, String address) {
+    public UserCredentialsResponse createTraineeProfile(String firstName, String lastName, Date dateOfBirth, String address) {
         if(firstName == null || lastName == null) {
             throw new IllegalArgumentException("FirstName and LastName must not be null");
         }
@@ -69,7 +78,7 @@ public class TraineeServiceImpl extends AbstractUserService<Trainee> implements 
         user.setFirstName(firstName);
         user.setLastName(lastName);
         user.setUsername(username);
-        user.setPassword(password);
+        user.setPassword(passwordEncoder.encode(password));
         user.setIsActive(true);
 
         Trainee trainee = new Trainee();
@@ -79,7 +88,7 @@ public class TraineeServiceImpl extends AbstractUserService<Trainee> implements 
 
         traineeDAO.save(trainee);
         logger.info("Created trainee profile with username: {}", username);
-        return trainee;
+        return new UserCredentialsResponse(username, password);
     }
 
     @Override
@@ -87,14 +96,9 @@ public class TraineeServiceImpl extends AbstractUserService<Trainee> implements 
         Optional<Trainee> traineeOpt = traineeDAO.findByUsername(username);
         if (traineeOpt.isPresent()) {
             Trainee trainee = traineeOpt.get();
-            if (trainee.getUser().getPassword().equals(oldPassword)) {
-                trainee.getUser().setPassword(newPassword);
-                traineeDAO.update(trainee);
-                logger.info("Password changed for trainee: {}", username);
-            } else {
-                logger.warn("Password change failed - incorrect old password for trainee: {}", username);
-                throw new SecurityException("Incorrect old password");
-            }
+            trainee.getUser().setPassword(passwordEncoder.encode(newPassword));
+            traineeDAO.update(trainee);
+            logger.info("Password changed for trainee: {}", username);
         } else {
             logger.warn("Password change failed - trainee not found: {}", username);
             throw new SecurityException("Trainee not found");
@@ -123,6 +127,7 @@ public class TraineeServiceImpl extends AbstractUserService<Trainee> implements 
 
     @Override
     public void updateStatus(Credentials credentials) {
+        validateCredentials(credentials);
         String username = credentials.getUsername();
         Optional<Trainee> traineeOpt = traineeDAO.findByUsername(username);
         if (traineeOpt.isPresent()) {
@@ -154,21 +159,6 @@ public class TraineeServiceImpl extends AbstractUserService<Trainee> implements 
             logger.warn("Trainee not found for deletion: {}", username);
             throw new IllegalArgumentException("Trainee not found");
         }
-    }
-
-    @Override
-    public void updateTraineeTrainers(Credentials credentials, Set<Long> trainerIds) {
-        String traineeUsername = credentials.getUsername();
-        Trainee trainee = traineeDAO.findByUsername(traineeUsername)
-                .orElseThrow(() -> new IllegalArgumentException("Trainee not found"));
-
-        Set<Trainer> trainers = trainerIds.stream()
-                .map(id -> trainerDAO.findById(id)
-                        .orElseThrow(() -> new IllegalArgumentException("Trainer not found: " + id)))
-                .collect(Collectors.toSet());
-
-        trainee.setTrainers(trainers);
-        traineeDAO.update(trainee);
     }
 
     @Override
