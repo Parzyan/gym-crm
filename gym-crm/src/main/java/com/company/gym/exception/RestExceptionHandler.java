@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.LockedException;
@@ -27,7 +28,7 @@ public class RestExceptionHandler {
     private static final String INTERNAL_SERVER_ERROR_MESSAGE = "An unexpected internal server error has occurred. Please try again later.";
     private static final String LOCKED_ERROR_MESSAGE = "Your IP has been temporarily blocked due to too many failed login attempts.";
 
-    @ExceptionHandler({BadCredentialsException.class, InvalidCredentialsException.class})
+    @ExceptionHandler({BadCredentialsException.class, InvalidCredentialsException.class, AccessDeniedException.class})
     protected ResponseEntity<ApiErrorResponse> handleBadCredentials(Exception ex, HttpServletRequest request) {
         log.warn("Authentication failure: {}", ex.getMessage());
 

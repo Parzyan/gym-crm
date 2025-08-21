@@ -28,6 +28,7 @@ public class TrainingDAOImpl implements TrainingDAO {
     private static final String TRAINING_TYPE_CLAUSE = " AND t.trainingType.id = :trainingTypeId";
     private static final String TRAINER_USERNAME_CLAUSE = " AND t.trainer.user.username = :trainerUsername";
     private static final String TRAINEE_USERNAME_CLAUSE = " AND t.trainee.user.username = :traineeUsername";
+    private static final String NOT_CANCELED_CLAUSE = " AND t.isCanceled = false";
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -78,6 +79,8 @@ public class TrainingDAOImpl implements TrainingDAO {
                                              String trainerUsername, Long trainingTypeId) {
         StringBuilder jpql = new StringBuilder(TRAINEE_CRITERIA_BASE_QUERY);
 
+        jpql.append(NOT_CANCELED_CLAUSE);
+
         if (fromDate != null) jpql.append(DATE_FROM_CLAUSE);
         if (toDate != null) jpql.append(DATE_TO_CLAUSE);
         if (trainerUsername != null && !trainerUsername.isEmpty()) jpql.append(TRAINER_USERNAME_CLAUSE);
@@ -101,6 +104,8 @@ public class TrainingDAOImpl implements TrainingDAO {
 
     private String buildTrainerCriteriaQuery(Date fromDate, Date toDate, String traineeUsername) {
         StringBuilder jpql = new StringBuilder(TRAINER_CRITERIA_BASE_QUERY);
+
+        jpql.append(NOT_CANCELED_CLAUSE);
 
         if (fromDate != null) jpql.append(DATE_FROM_CLAUSE);
         if (toDate != null) jpql.append(DATE_TO_CLAUSE);

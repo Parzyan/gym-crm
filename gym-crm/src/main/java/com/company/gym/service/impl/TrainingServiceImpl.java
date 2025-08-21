@@ -11,6 +11,7 @@ import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
@@ -90,6 +91,37 @@ public class TrainingServiceImpl extends AbstractBaseService<Training> implement
 
         logger.info("Created training with ID: {}", training.getId());
         return training;
+    }
+
+    @Override
+    public void cancelTraining(String traineeUsername, Long trainingId) {
+        Training training = trainingDAO.findById(trainingId)
+                .orElseThrow(() -> new EntityNotFoundException("Training not found with ID: " + trainingId));
+
+        if (!training.getTrainee().getUser().getUsername().equals(traineeUsername)) {
+            throw new AccessDeniedException("You are not authorized to cancel this training.");
+        }
+
+        if (training.isCanceled()) {
+            logger.warn("Training with ID {} is already canceled. No action taken.", trainingId);
+            return;
+        }
+
+        training.setCanceled(true);
+        trainingDAO.update(training);
+        logger.info("Training with ID {} has been successfully canceled by user {}.", trainingId, traineeUsername);
+
+        Trainer trainer = training.getTrainer();
+        TrainerWorkloadRequest payload = new TrainerWorkloadRequest();
+        payload.setTrainerUsername(trainer.getUser().getUsername());
+        payload.setTrainerFirstName(trainer.getUser().getFirstName());
+        payload.setTrainerLastName(trainer.getUser().getLastName());
+        payload.setActive(trainer.getUser().getIsActive());
+        payload.setTrainingDate(training.getTrainingDate());
+        payload.setTrainingDuration(training.getDuration());
+        payload.setActionType(ActionType.DELETE); // Or REMOVE, as you prefer
+
+        workloadServiceClient.updateWorkload(payload);
     }
 
     @Override

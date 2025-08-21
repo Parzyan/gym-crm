@@ -32,8 +32,8 @@ public class Training {
     @Column(name = "duration", nullable = false)
     private Integer duration;
 
-    @Column(name = "canceled", nullable = false)
-    private boolean canceled;
+    @Column(name = "is_canceled", nullable = false)
+    private boolean isCanceled = false;
 
     public Training() {
     }
@@ -46,7 +46,7 @@ public class Training {
         this.trainingType = trainingType;
         this.trainingDate = trainingDate;
         this.duration = duration;
-        this.canceled = false;
+        this.isCanceled = false;
     }
 
     public Long getId() {
@@ -106,11 +106,11 @@ public class Training {
     }
 
     public boolean isCanceled() {
-        return canceled;
+        return isCanceled;
     }
 
     public void setCanceled(boolean canceled) {
-        this.canceled = canceled;
+        isCanceled = canceled;
     }
 
     @Override

@@ -1,5 +1,6 @@
 package com.company.gym.service;
 
+import com.company.gym.client.WorkloadServiceClient;
 import com.company.gym.dao.*;
 import com.company.gym.entity.*;
 import com.company.gym.service.impl.AuthenticationServiceImpl;
@@ -30,6 +31,9 @@ class TrainingServiceImplTest {
 
     @Mock
     private TrainingTypeDAO trainingTypeDAO;
+
+    @Mock
+    private WorkloadServiceClient workloadServiceClient;
 
     @Mock
     private AuthenticationServiceImpl authenticationService;
