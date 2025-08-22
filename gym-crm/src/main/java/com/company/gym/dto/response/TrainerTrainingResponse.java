@@ -3,18 +3,24 @@ package com.company.gym.dto.response;
 import java.util.Date;
 
 public class TrainerTrainingResponse {
+    private Long id;
     private String trainingName;
     private Date trainingDate;
     private String trainingType;
     private Integer trainingDuration;
     private String traineeName;
 
-    public TrainerTrainingResponse(String trainingName, Date trainingDate, String trainingType, Integer trainingDuration, String traineeName) {
+    public TrainerTrainingResponse(Long id, String trainingName, Date trainingDate, String trainingType, Integer trainingDuration, String traineeName) {
+        this.id = id;
         this.trainingName = trainingName;
         this.trainingDate = trainingDate;
         this.trainingType = trainingType;
         this.trainingDuration = trainingDuration;
         this.traineeName = traineeName;
+    }
+
+    public Long getId() {
+        return id;
     }
 
     public String getTrainingName() {

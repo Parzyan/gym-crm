@@ -3,13 +3,13 @@ package com.company.gym.service.impl;
 import com.company.gym.dao.TrainingDAO;
 import com.company.gym.dao.impl.TraineeDAOImpl;
 import com.company.gym.dao.impl.TrainerDAOImpl;
-import com.company.gym.dao.impl.UserDAOImpl;
 import com.company.gym.dto.request.UpdateTraineeTrainersRequest;
 import com.company.gym.dto.response.UserCredentialsResponse;
 import com.company.gym.entity.*;
 import com.company.gym.exception.EntityNotFoundException;
 import com.company.gym.service.AbstractUserService;
 import com.company.gym.service.TraineeService;
+import com.company.gym.service.TrainingService;
 import com.company.gym.util.PasswordGenerator;
 import com.company.gym.util.UsernameGenerator;
 import jakarta.transaction.Transactional;
@@ -33,6 +33,7 @@ public class TraineeServiceImpl extends AbstractUserService<Trainee> implements 
     private TrainerDAOImpl trainerDAO;
     private TrainingDAO trainingDAO;
     private PasswordEncoder passwordEncoder;
+    private TrainingService trainingService;
 
     @Autowired
     public void setTraineeDAO(TraineeDAOImpl traineeDAO) {
@@ -64,6 +65,9 @@ public class TraineeServiceImpl extends AbstractUserService<Trainee> implements 
     public void setPasswordEncoder(PasswordEncoder passwordEncoder) {
         this.passwordEncoder = passwordEncoder;
     }
+
+    @Autowired
+    public void setTrainingService(TrainingService trainingService) { this.trainingService = trainingService; }
 
     @Override
     public UserCredentialsResponse createTraineeProfile(String firstName, String lastName, Date dateOfBirth, String address) {
@@ -151,14 +155,18 @@ public class TraineeServiceImpl extends AbstractUserService<Trainee> implements 
     @Transactional
     public void deleteTraineeProfile(Credentials credentials) {
         String username = credentials.getUsername();
-        Optional<Trainee> traineeOpt = traineeDAO.findByUsername(username);
-        if (traineeOpt.isPresent()) {
-            traineeDAO.delete(traineeOpt.get().getId());
-            logger.info("Deleted trainee profile: {}", username);
-        } else {
-            logger.warn("Trainee not found for deletion: {}", username);
-            throw new IllegalArgumentException("Trainee not found");
+        Trainee trainee = traineeDAO.findByUsername(username)
+                .orElseThrow(() -> new IllegalArgumentException("Trainee not found for deletion: " + username));
+
+        List<Training> trainingsToCancel = trainingDAO.findTrainingsByTraineeAndCriteria(trainee.getId(), null, null, null, null);
+        logger.info("Found {} trainings to cancel for trainee {}", trainingsToCancel.size(), username);
+
+        for (Training training : trainingsToCancel) {
+            trainingService.cancelTraining(username, training.getId());
         }
+
+        traineeDAO.delete(trainee.getId());
+        logger.info("Deleted trainee profile: {}", username);
     }
 
     @Override
