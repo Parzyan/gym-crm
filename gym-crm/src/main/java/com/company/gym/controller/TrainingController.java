@@ -157,20 +157,6 @@ public class TrainingController {
         return ResponseEntity.ok().build();
     }
 
-    @Operation(summary = "Cancel a training session", description = "Marks a training session as canceled.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "204", description = "Training canceled successfully"),
-            @ApiResponse(responseCode = "401", description = "Unauthorized - Invalid credentials"),
-            @ApiResponse(responseCode = "404", description = "Not Found - Training not found"),
-            @ApiResponse(responseCode = "500", description = "Internal Server Error")
-    })
-    @DeleteMapping("/{trainingId}")
-    public ResponseEntity<Void> cancelTraining(Principal principal, @PathVariable Long trainingId) {
-        String traineeUsername = principal.getName();
-        trainingService.cancelTraining(traineeUsername, trainingId);
-        return ResponseEntity.noContent().build();
-    }
-
     @Operation(summary = "Get all available training types", description = "Retrieves a list of all training types in the system.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Successfully retrieved training types"),

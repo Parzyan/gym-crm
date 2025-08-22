@@ -98,19 +98,6 @@ public class TrainingServiceImpl extends AbstractBaseService<Training> implement
         Training training = trainingDAO.findById(trainingId)
                 .orElseThrow(() -> new EntityNotFoundException("Training not found with ID: " + trainingId));
 
-        if (!training.getTrainee().getUser().getUsername().equals(traineeUsername)) {
-            throw new AccessDeniedException("You are not authorized to cancel this training.");
-        }
-
-        if (training.isCanceled()) {
-            logger.warn("Training with ID {} is already canceled. No action taken.", trainingId);
-            return;
-        }
-
-        training.setCanceled(true);
-        trainingDAO.update(training);
-        logger.info("Training with ID {} has been successfully canceled by user {}.", trainingId, traineeUsername);
-
         Trainer trainer = training.getTrainer();
         TrainerWorkloadRequest payload = new TrainerWorkloadRequest();
         payload.setTrainerUsername(trainer.getUser().getUsername());
@@ -119,7 +106,7 @@ public class TrainingServiceImpl extends AbstractBaseService<Training> implement
         payload.setActive(trainer.getUser().getIsActive());
         payload.setTrainingDate(training.getTrainingDate());
         payload.setTrainingDuration(training.getDuration());
-        payload.setActionType(ActionType.DELETE); // Or REMOVE, as you prefer
+        payload.setActionType(ActionType.DELETE);
 
         workloadServiceClient.updateWorkload(payload);
     }
