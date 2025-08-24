@@ -1,8 +1,10 @@
 package com.company.trainerworkload.controller;
 
+import com.company.trainerworkload.dao.WorkloadRepositoryImpl;
 import com.company.trainerworkload.dto.TrainerWorkloadRequest;
 import com.company.trainerworkload.entity.TrainerSummary;
 import com.company.trainerworkload.service.TrainerWorkloadService;
+import com.company.trainerworkload.service.TrainerWorkloadServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -10,6 +12,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import java.security.Principal;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
@@ -19,12 +22,14 @@ import static org.mockito.Mockito.*;
 class WorkloadControllerTest {
 
     private TrainerWorkloadService trainerWorkloadService;
+    private WorkloadRepositoryImpl workloadRepository;
     private WorkloadController workloadController;
 
     @BeforeEach
     void setUp() {
-        trainerWorkloadService = Mockito.mock(TrainerWorkloadService.class);
-        workloadController = new WorkloadController(trainerWorkloadService);
+        trainerWorkloadService = Mockito.mock(TrainerWorkloadServiceImpl.class);
+        workloadRepository = Mockito.mock(WorkloadRepositoryImpl.class);
+        workloadController = new WorkloadController(trainerWorkloadService, workloadRepository);
     }
 
     @Test
@@ -44,13 +49,13 @@ class WorkloadControllerTest {
         ResponseEntity<TrainerSummary> response = workloadController.getSummary("john", principal);
 
         assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
-        verify(trainerWorkloadService, never()).getTrainerSummary(anyString());
+        verify(workloadRepository, never()).findByUsername(anyString());
     }
 
     @Test
     void getSummary_whenSummaryIsNull() {
         Principal principal = () -> "john";
-        when(trainerWorkloadService.getTrainerSummary("john")).thenReturn(null);
+        when(workloadRepository.findByUsername("john")).thenReturn(Optional.empty());
 
         ResponseEntity<TrainerSummary> response = workloadController.getSummary("john", principal);
 
@@ -65,7 +70,7 @@ class WorkloadControllerTest {
         summary.setTrainerLastName("Doe");
         summary.setTrainerStatus(true);
 
-        when(trainerWorkloadService.getTrainerSummary("john")).thenReturn(summary);
+        when(workloadRepository.findByUsername("john")).thenReturn(Optional.of(summary));
 
         ResponseEntity<TrainerSummary> response = workloadController.getSummary("john", principal);
 

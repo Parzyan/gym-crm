@@ -1,5 +1,6 @@
 package com.company.trainerworkload.controller;
 
+import com.company.trainerworkload.dao.WorkloadRepositoryImpl;
 import com.company.trainerworkload.dto.TrainerWorkloadRequest;
 import com.company.trainerworkload.entity.TrainerSummary;
 import com.company.trainerworkload.service.TrainerWorkloadService;
@@ -15,10 +16,12 @@ import java.security.Principal;
 public class WorkloadController {
 
     private final TrainerWorkloadService trainerWorkloadService;
+    private final WorkloadRepositoryImpl workloadRepository;
 
     @Autowired
-    public WorkloadController(TrainerWorkloadService trainerWorkloadService) {
+    public WorkloadController(TrainerWorkloadService trainerWorkloadService, WorkloadRepositoryImpl workloadRepository) {
         this.trainerWorkloadService = trainerWorkloadService;
+        this.workloadRepository = workloadRepository;
     }
 
     @PostMapping
@@ -35,10 +38,8 @@ public class WorkloadController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
 
-        TrainerSummary summary = trainerWorkloadService.getTrainerSummary(username);
-        if (summary == null) {
-            return ResponseEntity.notFound().build();
-        }
-        return ResponseEntity.ok(summary);
+        return workloadRepository.findByUsername(username)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 }

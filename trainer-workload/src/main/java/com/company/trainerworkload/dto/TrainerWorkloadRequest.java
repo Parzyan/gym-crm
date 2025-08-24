@@ -2,14 +2,14 @@ package com.company.trainerworkload.dto;
 
 import com.company.trainerworkload.entity.ActionType;
 
-import java.util.Date;
+import java.time.LocalDate;
 
 public class TrainerWorkloadRequest {
     private String trainerUsername;
     private String trainerFirstName;
     private String trainerLastName;
     private boolean active;
-    private Date trainingDate;
+    private LocalDate trainingDate;
     private int trainingDuration;
     private ActionType actionType;
 
@@ -45,11 +45,11 @@ public class TrainerWorkloadRequest {
         this.active = active;
     }
 
-    public Date getTrainingDate() {
+    public LocalDate getTrainingDate() {
         return trainingDate;
     }
 
-    public void setTrainingDate(Date trainingDate) {
+    public void setTrainingDate(LocalDate trainingDate) {
         this.trainingDate = trainingDate;
     }
 
