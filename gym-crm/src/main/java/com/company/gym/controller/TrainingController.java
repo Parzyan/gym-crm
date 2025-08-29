@@ -81,6 +81,7 @@ public class TrainingController {
                     new Credentials(username, null), periodFrom, periodTo, trainerUsername, trainingTypeId);
 
             List<TraineeTrainingResponse> response = trainings.stream().map(t -> new TraineeTrainingResponse(
+                    t.getId(),
                     t.getTrainingName(),
                     t.getTrainingDate(),
                     t.getTrainingType().getTrainingTypeName(),
@@ -111,6 +112,7 @@ public class TrainingController {
                     new Credentials(username, null), periodFrom, periodTo, traineeUsername);
 
             List<TrainerTrainingResponse> response = trainings.stream().map(t -> new TrainerTrainingResponse(
+                    t.getId(),
                     t.getTrainingName(),
                     t.getTrainingDate(),
                     t.getTrainingType().getTrainingTypeName(),
