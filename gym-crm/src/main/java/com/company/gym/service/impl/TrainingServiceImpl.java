@@ -1,13 +1,17 @@
 package com.company.gym.service.impl;
 
+import com.company.gym.client.WorkloadServiceClient;
 import com.company.gym.dao.*;
+import com.company.gym.dto.request.TrainerWorkloadRequest;
 import com.company.gym.entity.*;
+import com.company.gym.exception.EntityNotFoundException;
 import com.company.gym.service.AbstractBaseService;
 import com.company.gym.service.TrainingService;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
@@ -22,6 +26,7 @@ public class TrainingServiceImpl extends AbstractBaseService<Training> implement
     private TraineeDAO traineeDAO;
     private TrainerDAO trainerDAO;
     private TrainingTypeDAO trainingTypeDAO;
+    private WorkloadServiceClient workloadServiceClient;
 
     @Autowired
     public void setTrainingDAO(TrainingDAO trainingDAO) {
@@ -42,6 +47,11 @@ public class TrainingServiceImpl extends AbstractBaseService<Training> implement
     @Autowired
     public void setTrainingTypeDAO(TrainingTypeDAO trainingTypeDAO) {
         this.trainingTypeDAO = trainingTypeDAO;
+    }
+
+    @Autowired
+    public void setWorkloadServiceClient(WorkloadServiceClient workloadServiceClient) {
+        this.workloadServiceClient = workloadServiceClient;
     }
 
     @Override
@@ -68,8 +78,37 @@ public class TrainingServiceImpl extends AbstractBaseService<Training> implement
         training.setDuration(duration);
 
         trainingDAO.save(training);
+
+        TrainerWorkloadRequest payload = new TrainerWorkloadRequest();
+        payload.setTrainerUsername(trainer.getUser().getUsername());
+        payload.setTrainerFirstName(trainer.getUser().getFirstName());
+        payload.setTrainerLastName(trainer.getUser().getLastName());
+        payload.setActive(trainer.getUser().getIsActive());
+        payload.setTrainingDate(trainingDate);
+        payload.setTrainingDuration(duration);
+        payload.setActionType(ActionType.ADD);
+        workloadServiceClient.updateWorkload(payload);
+
         logger.info("Created training with ID: {}", training.getId());
         return training;
+    }
+
+    @Override
+    public void cancelTraining(String traineeUsername, Long trainingId) {
+        Training training = trainingDAO.findById(trainingId)
+                .orElseThrow(() -> new EntityNotFoundException("Training not found with ID: " + trainingId));
+
+        Trainer trainer = training.getTrainer();
+        TrainerWorkloadRequest payload = new TrainerWorkloadRequest();
+        payload.setTrainerUsername(trainer.getUser().getUsername());
+        payload.setTrainerFirstName(trainer.getUser().getFirstName());
+        payload.setTrainerLastName(trainer.getUser().getLastName());
+        payload.setActive(trainer.getUser().getIsActive());
+        payload.setTrainingDate(training.getTrainingDate());
+        payload.setTrainingDuration(training.getDuration());
+        payload.setActionType(ActionType.DELETE);
+
+        workloadServiceClient.updateWorkload(payload);
     }
 
     @Override
