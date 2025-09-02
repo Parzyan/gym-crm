@@ -2,6 +2,7 @@ package com.company.gym.service;
 
 import com.company.gym.dao.impl.TraineeDAOImpl;
 import com.company.gym.dao.impl.TrainerDAOImpl;
+import com.company.gym.dao.impl.TrainingDAOImpl;
 import com.company.gym.dto.response.UserCredentialsResponse;
 import com.company.gym.entity.*;
 import com.company.gym.service.impl.AuthenticationServiceImpl;
@@ -37,6 +38,8 @@ class TraineeServiceImplTest {
     private AuthenticationServiceImpl authenticationService;
     @Mock
     private PasswordEncoder passwordEncoder;
+    @Mock
+    private TrainingDAOImpl trainingDAO;
 
     @InjectMocks
     private TraineeServiceImpl traineeService;

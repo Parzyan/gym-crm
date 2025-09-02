@@ -1,6 +1,5 @@
 package com.company.gym.service.impl;
 
-import com.company.gym.client.WorkloadServiceClient;
 import com.company.gym.dao.*;
 import com.company.gym.dto.request.TrainerWorkloadRequest;
 import com.company.gym.entity.*;
@@ -11,10 +10,10 @@ import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.access.AccessDeniedException;
+import org.springframework.jms.core.JmsTemplate;
 import org.springframework.stereotype.Service;
 
-import java.util.Date;
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -26,7 +25,7 @@ public class TrainingServiceImpl extends AbstractBaseService<Training> implement
     private TraineeDAO traineeDAO;
     private TrainerDAO trainerDAO;
     private TrainingTypeDAO trainingTypeDAO;
-    private WorkloadServiceClient workloadServiceClient;
+    private JmsTemplate jmsTemplate;
 
     @Autowired
     public void setTrainingDAO(TrainingDAO trainingDAO) {
@@ -50,13 +49,13 @@ public class TrainingServiceImpl extends AbstractBaseService<Training> implement
     }
 
     @Autowired
-    public void setWorkloadServiceClient(WorkloadServiceClient workloadServiceClient) {
-        this.workloadServiceClient = workloadServiceClient;
+    public void setJmsTemplate(JmsTemplate jmsTemplate) {
+        this.jmsTemplate = jmsTemplate;
     }
 
     @Override
     public Training createTraining(Credentials traineeCreds, Credentials trainerCreds, String trainingName,
-                                   Long trainingTypeId, Date trainingDate, Integer duration) {
+                                   Long trainingTypeId, LocalDate trainingDate, Integer duration) {
 
         if (duration <= 0) {
             throw new IllegalArgumentException("Duration must be positive");
@@ -87,7 +86,8 @@ public class TrainingServiceImpl extends AbstractBaseService<Training> implement
         payload.setTrainingDate(trainingDate);
         payload.setTrainingDuration(duration);
         payload.setActionType(ActionType.ADD);
-        workloadServiceClient.updateWorkload(payload);
+        jmsTemplate.convertAndSend("trainer.workload.queue", payload);
+        logger.info("Set workload update message for trainer {}", trainer.getUser().getUsername());
 
         logger.info("Created training with ID: {}", training.getId());
         return training;
@@ -108,11 +108,12 @@ public class TrainingServiceImpl extends AbstractBaseService<Training> implement
         payload.setTrainingDuration(training.getDuration());
         payload.setActionType(ActionType.DELETE);
 
-        workloadServiceClient.updateWorkload(payload);
+        jmsTemplate.convertAndSend("trainer-workload", payload);
+        logger.info("Cancel training with ID: {}", training.getId());
     }
 
     @Override
-    public List<Training> getTraineeTrainings(Credentials credentials, Date fromDate, Date toDate,
+    public List<Training> getTraineeTrainings(Credentials credentials, LocalDate fromDate, LocalDate toDate,
                                               String trainerUsername, Long trainingTypeId) {
 
         Trainee trainee = traineeDAO.findByUsername(credentials.getUsername())
@@ -123,7 +124,7 @@ public class TrainingServiceImpl extends AbstractBaseService<Training> implement
     }
 
     @Override
-    public List<Training> getTrainerTrainings(Credentials credentials, Date fromDate, Date toDate,
+    public List<Training> getTrainerTrainings(Credentials credentials, LocalDate fromDate, LocalDate toDate,
                                               String traineeUsername) {
 
         Trainer trainer = trainerDAO.findByUsername(credentials.getUsername())

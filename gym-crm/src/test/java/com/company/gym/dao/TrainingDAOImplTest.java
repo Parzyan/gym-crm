@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import java.time.LocalDate;
 import java.util.*;
 
 import com.company.gym.dao.impl.TrainingDAOImpl;
@@ -72,8 +73,8 @@ class TrainingDAOImplTest {
 
     @Test
     void findTrainingsByTraineeAndCriteria_AllParams() {
-        Date fromDate = new Date();
-        Date toDate = new Date();
+        LocalDate fromDate = LocalDate.now();
+        LocalDate toDate = LocalDate.now();
         String trainerUsername = "john.doe";
         Long trainingTypeId = 1L;
         List<Training> expected = List.of(new Training());
@@ -112,8 +113,8 @@ class TrainingDAOImplTest {
 
     @Test
     void findTrainingsByTrainerAndCriteria_AllParams() {
-        Date fromDate = new Date();
-        Date toDate = new Date();
+        LocalDate fromDate = LocalDate.now();
+        LocalDate toDate = LocalDate.now();
         String traineeUsername = "jane.smith";
         List<Training> expected = List.of(new Training());
 

@@ -1,16 +1,16 @@
 package com.company.gym.dto.response;
 
-import java.util.Date;
+import java.time.LocalDate;
 
 public class TraineeTrainingResponse {
     private Long id;
     private String trainingName;
-    private Date trainingDate;
+    private LocalDate trainingDate;
     private String trainingType;
     private Integer trainingDuration;
     private String trainerName;
 
-    public TraineeTrainingResponse(Long id, String trainingName, Date trainingDate, String trainingType, Integer trainingDuration, String trainerName) {
+    public TraineeTrainingResponse(Long id, String trainingName, LocalDate trainingDate, String trainingType, Integer trainingDuration, String trainerName) {
         this.id = id;
         this.trainingName = trainingName;
         this.trainingDate = trainingDate;
@@ -31,11 +31,11 @@ public class TraineeTrainingResponse {
         this.trainingName = trainingName;
     }
 
-    public Date getTrainingDate() {
+    public LocalDate getTrainingDate() {
         return trainingDate;
     }
 
-    public void setTrainingDate(Date trainingDate) {
+    public void setTrainingDate(LocalDate trainingDate) {
         this.trainingDate = trainingDate;
     }
 

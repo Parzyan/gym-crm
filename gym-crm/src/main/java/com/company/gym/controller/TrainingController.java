@@ -22,7 +22,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 import java.security.Principal;
-import java.util.Date;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -64,8 +64,8 @@ public class TrainingController {
     @GetMapping("/trainee")
     public ResponseEntity<List<TraineeTrainingResponse>> getTraineeTrainings(
             Principal principal,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Date periodFrom,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Date periodTo,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate periodFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate periodTo,
             @RequestParam(required = false) String trainerUsername,
             @RequestParam(required = false) String trainingType) {
         String username = principal.getName();
@@ -103,8 +103,8 @@ public class TrainingController {
     @GetMapping("/trainer")
     public ResponseEntity<List<TrainerTrainingResponse>> getTrainerTrainings(
             Principal principal,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Date periodFrom,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Date periodTo,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate periodFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate periodTo,
             @RequestParam(required = false) String traineeUsername) {
         String username = principal.getName();
         return trainingListFetchTimer.record(() -> {
