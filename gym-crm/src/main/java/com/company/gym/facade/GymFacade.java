@@ -11,10 +11,10 @@ import com.company.gym.service.impl.TrainingServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 
 @Service
 public class GymFacade {
@@ -90,18 +90,18 @@ public class GymFacade {
     }
 
     public Training createTraining(Credentials traineeCreds, Credentials trainerCreds, String trainingName,
-                                   Long trainingTypeId, Date trainingDate, Integer duration) {
+                                   Long trainingTypeId, LocalDate trainingDate, Integer duration) {
         return trainingServiceImpl.createTraining(traineeCreds, trainerCreds, trainingName,
                 trainingTypeId, trainingDate, duration);
     }
 
-    public List<Training> getTraineeTrainings(Credentials credentials, Date fromDate, Date toDate,
+    public List<Training> getTraineeTrainings(Credentials credentials, LocalDate fromDate, LocalDate toDate,
                                               String trainerName, Long trainingTypeId) {
         return trainingServiceImpl.getTraineeTrainings(credentials, fromDate, toDate, trainerName, trainingTypeId);
     }
 
-    public List<Training> getTrainerTrainings(Credentials credentials, Date fromDate,
-                                              Date toDate, String traineeName) {
+    public List<Training> getTrainerTrainings(Credentials credentials, LocalDate fromDate,
+                                              LocalDate toDate, String traineeName) {
         return trainingServiceImpl.getTrainerTrainings(credentials, fromDate, toDate, traineeName);
     }
 

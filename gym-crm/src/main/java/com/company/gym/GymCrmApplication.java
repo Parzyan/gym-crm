@@ -8,14 +8,12 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
-import org.springframework.cloud.openfeign.EnableFeignClients;
 
 import java.util.Calendar;
 import java.util.Date;
 
 @SpringBootApplication
 @EntityScan(basePackages = "com.company.gym.entity")
-@EnableFeignClients
 public class GymCrmApplication implements CommandLineRunner {
 
 	private static final Logger logger = LoggerFactory.getLogger(GymCrmApplication.class);
