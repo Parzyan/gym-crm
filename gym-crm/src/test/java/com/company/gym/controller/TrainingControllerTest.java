@@ -21,8 +21,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import java.security.Principal;
+import java.time.LocalDate;
 import java.util.Collections;
-import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
@@ -76,7 +76,7 @@ class TrainingControllerTest {
         testTraining = new Training();
         testTraining.setId(1L);
         testTraining.setTrainingName("Morning Session");
-        testTraining.setTrainingDate(new Date());
+        testTraining.setTrainingDate(LocalDate.now());
         testTraining.setTrainingType(testTrainingType);
         testTraining.setDuration(60);
         testTraining.setTrainee(testTrainee);
@@ -86,7 +86,7 @@ class TrainingControllerTest {
         addTrainingRequest.setTrainerUsername("jane.trainer");
         addTrainingRequest.setTrainingName("Morning Session");
         addTrainingRequest.setTrainingTypeName("Cardio");
-        addTrainingRequest.setTrainingDate(new Date());
+        addTrainingRequest.setTrainingDate(LocalDate.now());
         addTrainingRequest.setTrainingDuration(60);
 
         trainingController = new TrainingController(trainingService, trainingTypeDAO, trainingTypeService, meterRegistry);
@@ -167,12 +167,12 @@ class TrainingControllerTest {
                 "jane.trainer",
                 "Morning Session",
                 "Cardio",
-                new Date(),
+                LocalDate.now(),
                 60
         );
 
         when(trainingTypeDAO.findByName("Cardio")).thenReturn(Optional.of(testTrainingType));
-        when(trainingService.createTraining(any(), any(), anyString(), any(), any(Date.class), anyInt()))
+        when(trainingService.createTraining(any(), any(), anyString(), any(), any(LocalDate.class), anyInt()))
                 .thenReturn(testTraining);
 
         ResponseEntity<Void> response = trainingController.addTraining(principal, createRequest);
@@ -187,7 +187,7 @@ class TrainingControllerTest {
                 ),
                 eq("Morning Session"),
                 eq(1L),
-                any(Date.class),
+                any(LocalDate.class),
                 eq(60)
         );
     }

@@ -11,6 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.util.*;
 
 @Repository
@@ -56,8 +57,8 @@ public class TrainingDAOImpl implements TrainingDAO {
     }
 
     @Override
-    public List<Training> findTrainingsByTraineeAndCriteria(Long traineeId, Date fromDate,
-                                                            Date toDate, String trainerUsername,
+    public List<Training> findTrainingsByTraineeAndCriteria(Long traineeId, LocalDate fromDate,
+                                                            LocalDate toDate, String trainerUsername,
                                                             Long trainingTypeId) {
         String queryString = buildTraineeCriteriaQuery(fromDate, toDate, trainerUsername, trainingTypeId);
         TypedQuery<Training> query = entityManager.createQuery(queryString, Training.class);
@@ -66,15 +67,15 @@ public class TrainingDAOImpl implements TrainingDAO {
     }
 
     @Override
-    public List<Training> findTrainingsByTrainerAndCriteria(Long trainerId, Date fromDate,
-                                                            Date toDate, String traineeUsername) {
+    public List<Training> findTrainingsByTrainerAndCriteria(Long trainerId, LocalDate fromDate,
+                                                            LocalDate toDate, String traineeUsername) {
         String queryString = buildTrainerCriteriaQuery(fromDate, toDate, traineeUsername);
         TypedQuery<Training> query = entityManager.createQuery(queryString, Training.class);
         setTrainerCriteriaParameters(query, trainerId, fromDate, toDate, traineeUsername);
         return query.getResultList();
     }
 
-    private String buildTraineeCriteriaQuery(Date fromDate, Date toDate,
+    private String buildTraineeCriteriaQuery(LocalDate fromDate, LocalDate toDate,
                                              String trainerUsername, Long trainingTypeId) {
         StringBuilder jpql = new StringBuilder(TRAINEE_CRITERIA_BASE_QUERY);
 
@@ -87,7 +88,7 @@ public class TrainingDAOImpl implements TrainingDAO {
     }
 
     private void setTraineeCriteriaParameters(TypedQuery<Training> query, Long traineeId,
-                                              Date fromDate, Date toDate,
+                                              LocalDate fromDate, LocalDate toDate,
                                               String trainerUsername, Long trainingTypeId) {
         query.setParameter("traineeId", traineeId);
 
@@ -99,7 +100,7 @@ public class TrainingDAOImpl implements TrainingDAO {
         if (trainingTypeId != null) query.setParameter("trainingTypeId", trainingTypeId);
     }
 
-    private String buildTrainerCriteriaQuery(Date fromDate, Date toDate, String traineeUsername) {
+    private String buildTrainerCriteriaQuery(LocalDate fromDate, LocalDate toDate, String traineeUsername) {
         StringBuilder jpql = new StringBuilder(TRAINER_CRITERIA_BASE_QUERY);
 
         if (fromDate != null) jpql.append(DATE_FROM_CLAUSE);
@@ -110,7 +111,7 @@ public class TrainingDAOImpl implements TrainingDAO {
     }
 
     private void setTrainerCriteriaParameters(TypedQuery<Training> query, Long trainerId,
-                                              Date fromDate, Date toDate, String traineeUsername) {
+                                              LocalDate fromDate, LocalDate toDate, String traineeUsername) {
         query.setParameter("trainerId", trainerId);
 
         if (fromDate != null) query.setParameter("fromDate", fromDate);

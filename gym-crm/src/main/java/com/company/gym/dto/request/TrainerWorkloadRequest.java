@@ -2,6 +2,7 @@ package com.company.gym.dto.request;
 
 import com.company.gym.entity.ActionType;
 
+import java.time.LocalDate;
 import java.util.Date;
 
 public class TrainerWorkloadRequest {
@@ -9,7 +10,7 @@ public class TrainerWorkloadRequest {
     private String trainerFirstName;
     private String trainerLastName;
     private boolean active;
-    private Date trainingDate;
+    private LocalDate trainingDate;
     private int trainingDuration;
     private ActionType actionType;
 
@@ -45,11 +46,11 @@ public class TrainerWorkloadRequest {
         this.active = active;
     }
 
-    public Date getTrainingDate() {
+    public LocalDate getTrainingDate() {
         return trainingDate;
     }
 
-    public void setTrainingDate(Date trainingDate) {
+    public void setTrainingDate(LocalDate trainingDate) {
         this.trainingDate = trainingDate;
     }
 

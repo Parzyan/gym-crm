@@ -1,20 +1,17 @@
 package com.company.gym.dto.request;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
-
-import java.util.Date;
+import java.time.LocalDate;
 
 public class AddTrainingRequest {
     private String trainerUsername;
     private String trainingName;
     private String trainingTypeName;
 
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
-    private Date trainingDate;
+    private LocalDate trainingDate;
 
     private Integer trainingDuration;
 
-    public AddTrainingRequest(String trainerUsername, String trainingName, String trainingTypeName, Date trainingDate, Integer trainingDuration) {
+    public AddTrainingRequest(String trainerUsername, String trainingName, String trainingTypeName, LocalDate trainingDate, Integer trainingDuration) {
         this.trainerUsername = trainerUsername;
         this.trainingName = trainingName;
         this.trainingTypeName = trainingTypeName;
@@ -54,11 +51,11 @@ public class AddTrainingRequest {
         this.trainingTypeName = trainingTypeName;
     }
 
-    public Date getTrainingDate() {
+    public LocalDate getTrainingDate() {
         return trainingDate;
     }
 
-    public void setTrainingDate(Date trainingDate) {
+    public void setTrainingDate(LocalDate trainingDate) {
         this.trainingDate = trainingDate;
     }
 

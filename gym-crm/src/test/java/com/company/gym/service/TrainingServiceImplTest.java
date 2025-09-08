@@ -1,6 +1,5 @@
 package com.company.gym.service;
 
-import com.company.gym.client.WorkloadServiceClient;
 import com.company.gym.dao.*;
 import com.company.gym.entity.*;
 import com.company.gym.service.impl.AuthenticationServiceImpl;
@@ -14,7 +13,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.jms.core.JmsTemplate;
 
+import java.time.LocalDate;
 import java.util.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -33,7 +34,7 @@ class TrainingServiceImplTest {
     private TrainingTypeDAO trainingTypeDAO;
 
     @Mock
-    private WorkloadServiceClient workloadServiceClient;
+    private JmsTemplate jmsTemplate;
 
     @Mock
     private AuthenticationServiceImpl authenticationService;
@@ -75,7 +76,7 @@ class TrainingServiceImplTest {
         testTraining.setTrainer(testTrainer);
         testTraining.setTrainingName("Morning Session");
         testTraining.setTrainingType(testTrainingType);
-        testTraining.setTrainingDate(new Date());
+        testTraining.setTrainingDate(LocalDate.now());
         testTraining.setDuration(60);
 
         traineeCredentials = new Credentials("test.trainee", "traineePass");
@@ -91,7 +92,7 @@ class TrainingServiceImplTest {
 
         Training result = trainingService.createTraining(
                 traineeCredentials, trainerCredentials, "Morning Session",
-                1L, new Date(), 60);
+                1L, LocalDate.now(), 60);
 
         assertNotNull(result);
         assertEquals(testTrainee, result.getTrainee());
@@ -103,7 +104,7 @@ class TrainingServiceImplTest {
         assertThrows(IllegalArgumentException.class, () ->
                 trainingService.createTraining(
                         traineeCredentials, trainerCredentials, "Morning Session",
-                        1L, new Date(), 0));
+                        1L, LocalDate.now(), 0));
     }
 
     @Test
@@ -113,15 +114,15 @@ class TrainingServiceImplTest {
         assertThrows(IllegalArgumentException.class, () ->
                 trainingService.createTraining(
                         traineeCredentials, trainerCredentials, "Morning Session",
-                        1L, new Date(), 60));
+                        1L, LocalDate.now(), 60));
 
         verify(trainingDAO, never()).save(any());
     }
 
     @Test
     void getTraineeTrainings_Success() {
-        Date fromDate = new Date();
-        Date toDate = new Date();
+        LocalDate fromDate = LocalDate.now();
+        LocalDate toDate = LocalDate.now();
         when(traineeDAO.findByUsername("test.trainee")).thenReturn(Optional.of(testTrainee));
         when(trainingDAO.findTrainingsByTraineeAndCriteria(1L, fromDate, toDate, "test.trainer", 1L))
                 .thenReturn(List.of(testTraining));
@@ -135,8 +136,8 @@ class TrainingServiceImplTest {
 
     @Test
     void getTrainerTrainings_Success() {
-        Date fromDate = new Date();
-        Date toDate = new Date();
+        LocalDate fromDate = LocalDate.now();
+        LocalDate toDate = LocalDate.now();
         when(trainerDAO.findByUsername("test.trainer")).thenReturn(Optional.of(testTrainer));
         when(trainingDAO.findTrainingsByTrainerAndCriteria(1L, fromDate, toDate, "test.trainee"))
                 .thenReturn(List.of(testTraining));
