@@ -9,7 +9,9 @@ import com.company.gym.service.TrainingService;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.stereotype.Service;
 
@@ -20,6 +22,9 @@ import java.util.List;
 @Transactional
 public class TrainingServiceImpl extends AbstractBaseService<Training> implements TrainingService {
     private static final Logger logger = LoggerFactory.getLogger(TrainingServiceImpl.class);
+
+    @Value("${queue.trainer.workload}")
+    private String trainerWorkloadQueue;
 
     private TrainingDAO trainingDAO;
     private TraineeDAO traineeDAO;
@@ -86,7 +91,13 @@ public class TrainingServiceImpl extends AbstractBaseService<Training> implement
         payload.setTrainingDate(trainingDate);
         payload.setTrainingDuration(duration);
         payload.setActionType(ActionType.ADD);
-        jmsTemplate.convertAndSend("trainer.workload.queue", payload);
+        jmsTemplate.convertAndSend(trainerWorkloadQueue, payload, message -> {
+            String transactionId = MDC.get("transactionId");
+            if (transactionId != null) {
+                message.setStringProperty("X-Transaction-ID", transactionId);
+            }
+            return message;
+        });
         logger.info("Set workload update message for trainer {}", trainer.getUser().getUsername());
 
         logger.info("Created training with ID: {}", training.getId());
@@ -108,7 +119,13 @@ public class TrainingServiceImpl extends AbstractBaseService<Training> implement
         payload.setTrainingDuration(training.getDuration());
         payload.setActionType(ActionType.DELETE);
 
-        jmsTemplate.convertAndSend("trainer-workload", payload);
+        jmsTemplate.convertAndSend(trainerWorkloadQueue, payload, message -> {
+            String transactionId = MDC.get("transactionId");
+            if (transactionId != null) {
+                message.setStringProperty("X-Transaction-ID", transactionId);
+            }
+            return message;
+        });
         logger.info("Cancel training with ID: {}", training.getId());
     }
 
