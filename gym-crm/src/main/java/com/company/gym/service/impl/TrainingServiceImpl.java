@@ -83,22 +83,7 @@ public class TrainingServiceImpl extends AbstractBaseService<Training> implement
 
         trainingDAO.save(training);
 
-        TrainerWorkloadRequest payload = new TrainerWorkloadRequest();
-        payload.setTrainerUsername(trainer.getUser().getUsername());
-        payload.setTrainerFirstName(trainer.getUser().getFirstName());
-        payload.setTrainerLastName(trainer.getUser().getLastName());
-        payload.setActive(trainer.getUser().getIsActive());
-        payload.setTrainingDate(trainingDate);
-        payload.setTrainingDuration(duration);
-        payload.setActionType(ActionType.ADD);
-        jmsTemplate.convertAndSend(trainerWorkloadQueue, payload, message -> {
-            String transactionId = MDC.get("transactionId");
-            if (transactionId != null) {
-                message.setStringProperty("X-Transaction-ID", transactionId);
-            }
-            return message;
-        });
-        logger.info("Set workload update message for trainer {}", trainer.getUser().getUsername());
+        sendTrainerWorkloadUpdate(trainer, trainingDate, duration, ActionType.ADD);
 
         logger.info("Created training with ID: {}", training.getId());
         return training;
@@ -109,23 +94,9 @@ public class TrainingServiceImpl extends AbstractBaseService<Training> implement
         Training training = trainingDAO.findById(trainingId)
                 .orElseThrow(() -> new EntityNotFoundException("Training not found with ID: " + trainingId));
 
-        Trainer trainer = training.getTrainer();
-        TrainerWorkloadRequest payload = new TrainerWorkloadRequest();
-        payload.setTrainerUsername(trainer.getUser().getUsername());
-        payload.setTrainerFirstName(trainer.getUser().getFirstName());
-        payload.setTrainerLastName(trainer.getUser().getLastName());
-        payload.setActive(trainer.getUser().getIsActive());
-        payload.setTrainingDate(training.getTrainingDate());
-        payload.setTrainingDuration(training.getDuration());
-        payload.setActionType(ActionType.DELETE);
+        sendTrainerWorkloadUpdate(training.getTrainer(), training.getTrainingDate(),
+                training.getDuration(), ActionType.DELETE);
 
-        jmsTemplate.convertAndSend(trainerWorkloadQueue, payload, message -> {
-            String transactionId = MDC.get("transactionId");
-            if (transactionId != null) {
-                message.setStringProperty("X-Transaction-ID", transactionId);
-            }
-            return message;
-        });
         logger.info("Cancel training with ID: {}", training.getId());
     }
 
@@ -149,5 +120,27 @@ public class TrainingServiceImpl extends AbstractBaseService<Training> implement
 
         return trainingDAO.findTrainingsByTrainerAndCriteria(
                 trainer.getId(), fromDate, toDate, traineeUsername);
+    }
+
+    private void sendTrainerWorkloadUpdate(Trainer trainer, LocalDate trainingDate, Integer duration, ActionType actionType) {
+        TrainerWorkloadRequest payload = new TrainerWorkloadRequest();
+        payload.setTrainerUsername(trainer.getUser().getUsername());
+        payload.setTrainerFirstName(trainer.getUser().getFirstName());
+        payload.setTrainerLastName(trainer.getUser().getLastName());
+        payload.setActive(trainer.getUser().getIsActive());
+        payload.setTrainingDate(trainingDate);
+        payload.setTrainingDuration(duration);
+        payload.setActionType(actionType);
+
+        jmsTemplate.convertAndSend(trainerWorkloadQueue, payload, message -> {
+            String transactionId = MDC.get("transactionId");
+            if (transactionId != null) {
+                message.setStringProperty("X-Transaction-ID", transactionId);
+            }
+            return message;
+        });
+
+        logger.info("Sent workload update message for trainer {} with action {}",
+                trainer.getUser().getUsername(), actionType);
     }
 }

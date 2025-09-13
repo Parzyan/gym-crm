@@ -1,7 +1,6 @@
 package com.company.trainerworkload.listener;
 
 import com.company.trainerworkload.dto.TrainerWorkloadRequest;
-import com.company.trainerworkload.service.MongoWorkloadServiceImpl;
 import com.company.trainerworkload.service.TrainerWorkloadService;
 import jakarta.jms.Message;
 import org.slf4j.Logger;
@@ -33,12 +32,16 @@ public class WorkloadListener {
             if (transactionId != null) {
                 MDC.put("transactionId", transactionId);
             }
-
             log.info("Received workload message for trainer: {}", payload.getTrainerUsername());
+
+            validatePayload(payload);
 
             trainerWorkloadService.updateWorkload(payload);
 
             log.info("Successfully processed message for trainer: {}", payload.getTrainerUsername());
+        } catch (IllegalArgumentException e) {
+            log.error("Invalid message received for trainer '{}'", payload.getTrainerUsername());
+            throw new RuntimeException("Validation failed", e);
         } catch (Exception e) {
             log.error("Failed to process message for trainer: {}", payload.getTrainerUsername());
             throw new RuntimeException(e);
@@ -46,6 +49,21 @@ public class WorkloadListener {
             if (transactionId != null) {
                 MDC.clear();
             }
+        }
+    }
+
+    private void validatePayload(TrainerWorkloadRequest payload) {
+        if (payload.getTrainerUsername() == null || payload.getTrainerUsername().isBlank()) {
+            throw new IllegalArgumentException("Trainer username cannot be null or blank.");
+        }
+        if (payload.getTrainerFirstName() == null || payload.getTrainerLastName() == null) {
+            throw new IllegalArgumentException("Trainer first name and last name are required.");
+        }
+        if (payload.getTrainingDate() == null) {
+            throw new IllegalArgumentException("Training date cannot be null.");
+        }
+        if (payload.getActionType() == null) {
+            throw new IllegalArgumentException("Action type is required.");
         }
     }
 }

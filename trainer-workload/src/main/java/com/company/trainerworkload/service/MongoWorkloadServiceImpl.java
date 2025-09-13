@@ -18,7 +18,7 @@ public class MongoWorkloadServiceImpl implements TrainerWorkloadService{
 
     private static final Logger log = LoggerFactory.getLogger(MongoWorkloadServiceImpl.class);
 
-    private TrainerSummaryRepository trainerSummaryRepository;
+    private final TrainerSummaryRepository trainerSummaryRepository;
 
     @Autowired
     public MongoWorkloadServiceImpl(TrainerSummaryRepository trainerSummaryRepository) {
@@ -29,31 +29,29 @@ public class MongoWorkloadServiceImpl implements TrainerWorkloadService{
     public void updateWorkload(TrainerWorkloadRequest dto) {
         log.info("Processing workload event for trainer: {}", dto.getTrainerUsername());
 
-        if (dto.getTrainerUsername() == null || dto.getTrainerUsername().isBlank()) {
-            throw new IllegalArgumentException("Validation failed: Trainer username cannot be null or blank.");
-        }
-        if (dto.getTrainerFirstName() == null || dto.getTrainerLastName() == null) {
-            throw new IllegalArgumentException("Validation failed: Trainer first name and last name are required.");
-        }
-        if (dto.getTrainingDate() == null) {
-            throw new IllegalArgumentException("Validation failed: Training date cannot be null.");
-        }
-        if (dto.getActionType() == null) {
-            throw new IllegalArgumentException("Validation failed: Action type is required.");
-        }
-
-        TrainerSummary summary = trainerSummaryRepository.findByTrainerUsername(dto.getTrainerUsername())
-                .orElseGet(() -> {
-                    log.info("No document found for trainer '{}'. Creating a new one.", dto.getTrainerUsername());
-                    TrainerSummary newSummary = new TrainerSummary();
-                    newSummary.setTrainerUsername(dto.getTrainerUsername());
-                    return newSummary;
-                });
+        TrainerSummary summary = getOrCreateSummary(dto.getTrainerUsername());
 
         summary.setTrainerFirstName(dto.getTrainerFirstName());
         summary.setTrainerLastName(dto.getTrainerLastName());
         summary.setTrainerStatus(dto.isActive());
 
+        updateMonthlyDuration(summary, dto);
+
+        trainerSummaryRepository.save(summary);
+        log.info("Successfully saved summary for trainer '{}' to MongoDB.", dto.getTrainerUsername());
+    }
+
+    private TrainerSummary getOrCreateSummary(String username) {
+        return trainerSummaryRepository.findByTrainerUsername(username)
+                .orElseGet(() -> {
+                    log.info("No document found for trainer '{}'. Creating a new one.", username);
+                    TrainerSummary newSummary = new TrainerSummary();
+                    newSummary.setTrainerUsername(username);
+                    return newSummary;
+                });
+    }
+
+    private void updateMonthlyDuration(TrainerSummary summary, TrainerWorkloadRequest dto) {
         int year = dto.getTrainingDate().getYear();
         int month = dto.getTrainingDate().getMonthValue();
 
@@ -68,10 +66,8 @@ public class MongoWorkloadServiceImpl implements TrainerWorkloadService{
 
         int currentDuration = monthSummary.getTrainingSummaryDuration();
         monthSummary.setTrainingSummaryDuration(currentDuration + durationChange);
+
         log.info("Updated duration for trainer '{}' for {}-{}. Old: {}, Change: {}, New: {}",
                 dto.getTrainerUsername(), year, month, currentDuration, durationChange, monthSummary.getTrainingSummaryDuration());
-
-        trainerSummaryRepository.save(summary);
-        log.info("Successfully saved summary for trainer '{}' to MongoDB.", dto.getTrainerUsername());
     }
 }
