@@ -29,6 +29,19 @@ public class TrainerWorkloadRequest {
     @NotNull(message = "Action type is required.")
     private ActionType actionType;
 
+    public TrainerWorkloadRequest() {
+    }
+
+    public TrainerWorkloadRequest(String trainerUsername, String trainerFirstName, String trainerLastName, boolean active, LocalDate trainingDate, int trainingDuration, ActionType actionType) {
+        this.trainerUsername = trainerUsername;
+        this.trainerFirstName = trainerFirstName;
+        this.trainerLastName = trainerLastName;
+        this.active = active;
+        this.trainingDate = trainingDate;
+        this.trainingDuration = trainingDuration;
+        this.actionType = actionType;
+    }
+
     public String getTrainerUsername() {
         return trainerUsername;
     }

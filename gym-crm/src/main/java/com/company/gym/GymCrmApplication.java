@@ -14,26 +14,11 @@ import java.util.Date;
 
 @SpringBootApplication
 @EntityScan(basePackages = "com.company.gym.entity")
-public class GymCrmApplication implements CommandLineRunner {
+public class GymCrmApplication {
 
 	private static final Logger logger = LoggerFactory.getLogger(GymCrmApplication.class);
 
-	@Autowired
-	private GymFacade gymFacade;
-
 	public static void main(String[] args) {
 		SpringApplication.run(GymCrmApplication.class, args);
-	}
-
-	@Override
-	public void run(String... args) {
-		logger.info("Created trainee");
-		gymFacade.createTrainee("Bob", "Johnson", new Date(90, Calendar.JANUARY, 1), "123 Street");
-		gymFacade.createTrainee("Bob", "Johnson", new Date(91, Calendar.JANUARY, 1), "123 Street");
-		gymFacade.createTrainee("Bob", "Johnson", new Date(92, Calendar.JANUARY, 1), "123 Street");
-		gymFacade.createTrainee("Mike", "Johnson", new Date(95, Calendar.JANUARY, 1), "124 Street");
-
-		gymFacade.createTrainer("Mike", "Johnson", 1L);
-		gymFacade.createTrainer("Alex", "Pitt", 2L);
 	}
 }
