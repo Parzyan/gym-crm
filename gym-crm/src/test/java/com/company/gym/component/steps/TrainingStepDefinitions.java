@@ -38,28 +38,13 @@ public class TrainingStepDefinitions extends ComponentTestBase {
         testJmsListener.clear();
     }
 
-    @Given("a trainee with username {string} and a trainer with username {string} exist in the database")
-    public void a_trainee_and_trainer_exist(String traineeUsername, String trainerUsername) {
-        assertThat(trainerDAO.findByUsername(trainerUsername)).as("Static trainer 'jane.doe' should be pre-loaded by data.sql").isPresent();
-
-        User traineeUser = new User();
-        traineeUser.setFirstName("John");
-        traineeUser.setLastName("Smith");
-        traineeUser.setUsername(traineeUsername);
-        traineeUser.setPassword("password");
-        traineeUser.setIsActive(true);
-        Trainee trainee = new Trainee();
-        trainee.setUser(traineeUser);
-        traineeDAO.save(trainee);
-    }
-
     @Given("a training type named {string} exists")
-    public void a_training_type_named_exists(String typeName) {
+    public void trainingTypeExists(String typeName) {
         assertThat(trainingTypeDAO.findByName(typeName)).as("Static training type '" + typeName + "' should be pre-loaded by data.sql").isPresent();
     }
 
     @When("a new training is created for trainee {string} and trainer {string} with type {string}, date {string}, and duration {int}")
-    public void a_new_training_is_created(String traineeUsername, String trainerUsername, String typeName, String date, int duration) {
+    public void createTraining(String traineeUsername, String trainerUsername, String typeName, String date, int duration) {
         TrainingType type = trainingTypeDAO.findByName(typeName).orElseThrow(() -> new IllegalStateException("Training type not found: " + typeName));
         trainingService.createTraining(
                 new Credentials(traineeUsername, null),
@@ -72,7 +57,7 @@ public class TrainingStepDefinitions extends ComponentTestBase {
     }
 
     @Then("a training record for {string} and {string} should be saved in the database")
-    public void a_training_record_should_be_saved(String traineeUsername, String trainerUsername) {
+    public void trainingShouldBeSaved(String traineeUsername, String trainerUsername) {
         List<Training> trainings = trainingDAO.findAll();
         assertThat(trainings).hasSize(1);
         Training savedTraining = trainings.get(0);
@@ -82,7 +67,7 @@ public class TrainingStepDefinitions extends ComponentTestBase {
     }
 
     @Then("a workload message for {string} with action {string}, date {string}, and duration {int} should be sent to the queue")
-    public void a_workload_message_should_be_sent(String trainerUsername, String action, String date, int duration) {
+    public void workloadMessageShouldBeSent(String trainerUsername, String action, String date, int duration) {
         TrainerWorkloadRequest receivedMessage = await().atMost(5, TimeUnit.SECONDS)
                 .until(() -> testJmsListener.getReceivedMessages().poll(), java.util.Objects::nonNull);
         assertThat(receivedMessage).isNotNull();

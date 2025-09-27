@@ -37,12 +37,12 @@ public class WorkloadStepDefinitions extends ComponentTestBase {
     }
 
     @Given("the database is empty")
-    public void the_database_is_empty() {
+    public void databaseIsEmpty() {
         assertThat(trainerSummaryRepository.count()).isZero();
     }
 
     @Given("a trainer {string} exists with {int} minutes of training in month {int} of year {int}")
-    public void a_trainer_exists_with_minutes_of_training_in_month_of_year(String username, int duration, int month, int year) {
+    public void createTrainerSummary(String username, int duration, int month, int year) {
         TrainerSummary summary = new TrainerSummary();
         summary.setTrainerUsername(username);
         summary.setTrainerFirstName("Jane");
@@ -61,7 +61,7 @@ public class WorkloadStepDefinitions extends ComponentTestBase {
     }
 
     @When("a workload message is sent for trainer {string} with first name {string}, last name {string}, action {string}, date {string}, and duration {int}")
-    public void a_workload_message_is_sent(String username, String firstName, String lastName, String action, String date, int duration) {
+    public void workloadMessageIsSent(String username, String firstName, String lastName, String action, String date, int duration) {
         TrainerWorkloadRequest request = new TrainerWorkloadRequest();
         request.setTrainerUsername(username);
         request.setTrainerFirstName(firstName);
@@ -75,7 +75,7 @@ public class WorkloadStepDefinitions extends ComponentTestBase {
     }
 
     @When("a workload message with a blank username is sent")
-    public void a_workload_message_with_a_blank_username_is_sent() {
+    public void workloadMessageWithBlankUsername() {
         TrainerWorkloadRequest request = new TrainerWorkloadRequest();
         request.setTrainerUsername("");
         request.setTrainerFirstName("John");
@@ -89,7 +89,7 @@ public class WorkloadStepDefinitions extends ComponentTestBase {
     }
 
     @Then("a trainer summary for {string} should exist in the database")
-    public void a_trainer_summary_for_should_exist_in_the_database(String username) {
+    public void trainerSummaryExists(String username) {
         await().atMost(Duration.ofSeconds(10)).untilAsserted(() -> {
             Optional<TrainerSummary> summary = trainerSummaryRepository.findByTrainerUsername(username);
             assertThat(summary).isPresent();
@@ -97,12 +97,12 @@ public class WorkloadStepDefinitions extends ComponentTestBase {
     }
 
     @Then("the trainer summary for {string} should be updated")
-    public void the_trainer_summary_for_should_be_updated(String username) {
-        a_trainer_summary_for_should_exist_in_the_database(username);
+    public void trainerSummaryShouldBeUpdated(String username) {
+        trainerSummaryExists(username);
     }
 
     @Then("the training duration for {string} for month {int} of year {int} should be {int}")
-    public void the_training_duration_for_month_of_year_should_be(String username, int month, int year, int expectedDuration) {
+    public void checkTrainingSummary(String username, int month, int year, int expectedDuration) {
         await().atMost(Duration.ofSeconds(10)).untilAsserted(() -> {
             Optional<TrainerSummary> summaryOpt = trainerSummaryRepository.findByTrainerUsername(username);
             assertThat(summaryOpt).isPresent();
@@ -118,18 +118,13 @@ public class WorkloadStepDefinitions extends ComponentTestBase {
         });
     }
 
-    @Then("the training duration for {string} for month {int} of year {int} should still be {int}")
-    public void the_training_duration_for_month_of_year_should_still_be(String username, int month, int year, int expectedDuration) {
-        the_training_duration_for_month_of_year_should_be(username, month, year, expectedDuration);
-    }
-
     @Then("the message processing should fail")
-    public void the_message_processing_should_fail() throws InterruptedException {
+    public void messageShouldFail() throws InterruptedException {
         Thread.sleep(1000);
     }
 
     @Then("the database should remain empty")
-    public void the_database_should_remain_empty() {
+    public void databaseShouldBeEmpty() {
         assertThat(trainerSummaryRepository.count()).isZero();
     }
 

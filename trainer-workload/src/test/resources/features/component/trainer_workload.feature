@@ -17,7 +17,7 @@ Feature: Trainer Workload Management
     When a workload message is sent for trainer "jane.doe" with first name "Jane", last name "Doe", action "ADD", date "2025-10-10", and duration 90
     Then the trainer summary for "jane.doe" should be updated
     And the training duration for "jane.doe" for month 10 of year 2025 should be 90
-    And the training duration for "jane.doe" for month 9 of year 2025 should still be 120
+    And the training duration for "jane.doe" for month 9 of year 2025 should be 120
 
   Scenario: A trainer deletes a training session
     Given a trainer "jane.doe" exists with 120 minutes of training in month 9 of year 2025

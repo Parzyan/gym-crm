@@ -28,7 +28,7 @@ public class TrainerStepDefinitions extends ComponentTestBase {
     private PasswordEncoder passwordEncoder;
 
     @Given("an active trainer with username {string} exists")
-    public void an_active_trainer_with_username_exists(String username) {
+    public void createTrainer(String username) {
         TrainingType cardioType = trainingTypeDAO.findByName("Cardio").get();
 
         trainerDAO.findByUsername(username).orElseGet(() -> {
@@ -47,19 +47,19 @@ public class TrainerStepDefinitions extends ComponentTestBase {
     }
 
     @When("a new trainer profile is created with first name {string}, last name {string}, and specialization {string}")
-    public void a_new_trainer_profile_is_created(String firstName, String lastName, String specialization) {
+    public void createTrainerProfile(String firstName, String lastName, String specialization) {
         TrainingType type = trainingTypeDAO.findByName(specialization)
                 .orElseThrow(() -> new IllegalStateException("Training type not found: " + specialization));
         trainerService.createTrainerProfile(firstName, lastName, type.getId());
     }
 
     @When("the status for trainer {string} is updated")
-    public void the_status_for_trainer_is_updated(String username) {
+    public void trainerStatusIsUpdated(String username) {
         trainerService.updateStatus(new Credentials(username, "password"));
     }
 
     @Then("a trainer user with username starting with {string} should exist")
-    public void a_trainer_user_should_exist(String username) {
+    public void trainerShouldExist(String username) {
         List<Trainer> trainers = trainerDAO.findAll();
         Trainer savedTrainer = trainers.stream()
                 .filter(t -> t.getUser().getUsername().startsWith(username))
@@ -70,7 +70,7 @@ public class TrainerStepDefinitions extends ComponentTestBase {
     }
 
     @Then("the trainer {string} should have an inactive status in the database")
-    public void the_trainer_should_have_an_inactive_status(String username) {
+    public void trainerShouldBeInactive(String username) {
         Trainer trainer = trainerDAO.findByUsername(username).orElseThrow();
         assertThat(trainer.getUser().getIsActive()).isFalse();
     }

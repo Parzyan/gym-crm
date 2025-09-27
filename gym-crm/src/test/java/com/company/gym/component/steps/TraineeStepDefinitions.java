@@ -48,47 +48,34 @@ public class TraineeStepDefinitions extends ComponentTestBase {
     }
 
     @Given("the database is empty for trainees")
-    public void the_database_is_empty_for_trainees() {
+    public void databaseIsEmpty() {
         assertThat(traineeDAO.findAll()).isEmpty();
     }
 
     @Given("a trainee with username {string} exists in the database")
-    public void a_trainee_exists_in_the_database(String username) {
-        User user = new User();
-        user.setFirstName("John");
-        user.setLastName("Doe");
-        user.setUsername(username);
-        user.setPassword(passwordEncoder.encode("password"));
-        user.setIsActive(true);
-        testTrainee = new Trainee();
-        testTrainee.setUser(user);
-        testTrainee.setAddress("Old Address");
-        traineeDAO.save(testTrainee);
-    }
-
-    @Given("a training session exists for trainee {string} with trainer {string}")
-    public void a_training_session_exists_for_trainee_with_trainer(String traineeUsername, String trainerUsername) {
-        TrainingType cardioType = trainingTypeDAO.findByName("Cardio")
-                .orElseThrow(() -> new IllegalStateException("Static training type 'Cardio' not found. Check data.sql"));
-
-        this.testTrainee = traineeDAO.findByUsername(traineeUsername).orElseGet(() -> {
+    public void createTrainee(String username) {
+        this.testTrainee = traineeDAO.findByUsername(username).orElseGet(() -> {
             User traineeUser = new User();
             traineeUser.setFirstName("John");
             traineeUser.setLastName("Doe");
-            traineeUser.setUsername(traineeUsername);
-            traineeUser.setPassword(passwordEncoder.encode("password"));
+            traineeUser.setUsername(username);
+            traineeUser.setPassword(passwordEncoder.encode(username));
             traineeUser.setIsActive(true);
             Trainee newTrainee = new Trainee();
             newTrainee.setUser(traineeUser);
             traineeDAO.save(newTrainee);
             return newTrainee;
         });
+    }
 
-        this.testTrainer = trainerDAO.findByUsername(trainerUsername).orElseGet(() -> {
+    @Given("a trainer with username {string} exists in the database")
+    public void createTrainer(String username) {
+        this.testTrainer = trainerDAO.findByUsername(username).orElseGet(() -> {
+            TrainingType cardioType = trainingTypeDAO.findByName("Cardio").get();
             User trainerUser = new User();
             trainerUser.setFirstName("Jane");
             trainerUser.setLastName("Doe");
-            trainerUser.setUsername(trainerUsername);
+            trainerUser.setUsername(username);
             trainerUser.setPassword(passwordEncoder.encode("password"));
             trainerUser.setIsActive(true);
             Trainer newTrainer = new Trainer();
@@ -97,7 +84,11 @@ public class TraineeStepDefinitions extends ComponentTestBase {
             trainerDAO.save(newTrainer);
             return newTrainer;
         });
+    }
 
+    @When("a training for trainee {string} and trainer {string} is created")
+    public void createTraining(String traineeUsername, String trainerUsername) {
+        TrainingType cardioType = trainingTypeDAO.findByName("Cardio").orElseThrow();
         testTraining = new Training();
         testTraining.setTrainee(testTrainee);
         testTraining.setTrainer(testTrainer);
@@ -106,37 +97,35 @@ public class TraineeStepDefinitions extends ComponentTestBase {
         testTraining.setTrainingDate(LocalDate.of(2025, 10, 5));
         testTraining.setDuration(60);
         trainingDAO.save(testTraining);
-
-        assertThat(trainingDAO.findById(testTraining.getId())).isPresent();
     }
 
     @When("a new trainee profile is created with first name {string} and last name {string}")
-    public void a_new_trainee_profile_is_created(String firstName, String lastName) {
+    public void newTraineeProfileIsCreated(String firstName, String lastName) {
         traineeService.createTraineeProfile(firstName, lastName, new Date(), "1 Main Street");
     }
 
     @When("the trainee {string} updates their address to {string}")
-    public void the_trainee_updates_their_address(String username, String newAddress) {
+    public void traineeUpdatesAddress(String username, String newAddress) {
         traineeService.updateTraineeProfile(new Credentials(username, null), null, newAddress);
     }
 
     @When("the trainee with username {string} is deleted")
-    public void the_trainee_with_username_is_deleted(String traineeUsername) {
+    public void traineeIsDeleted(String traineeUsername) {
         traineeService.deleteTraineeProfile(new Credentials(traineeUsername, null));
     }
 
     @Then("the trainee {string} should no longer exist in the database")
-    public void the_trainee_should_no_longer_exist_in_the_database(String traineeUsername) {
+    public void traineeShouldNotExistInDb(String traineeUsername) {
         assertThat(traineeDAO.findByUsername(traineeUsername)).isEmpty();
     }
 
     @Then("the training record should also be deleted")
-    public void the_training_record_should_also_be_deleted() {
+    public void trainingRecordShouldBeDeleted() {
         assertThat(trainingDAO.findById(testTraining.getId())).isEmpty();
     }
 
     @Then("a trainee user with username starting with {string} should exist in the database with an active status")
-    public void a_trainee_user_should_exist(String usernamePrefix) {
+    public void traineeUserShouldExist(String usernamePrefix) {
         List<Trainee> trainees = traineeDAO.findAll();
         assertThat(trainees).hasSize(1);
         Trainee savedTrainee = trainees.get(0);
@@ -145,13 +134,13 @@ public class TraineeStepDefinitions extends ComponentTestBase {
     }
 
     @Then("the profile for {string} should be updated in the database with the {string} address")
-    public void the_profile_for_should_be_updated_with_new_address(String username, String expectedAddress) {
+    public void profileShouldBeUpdatedWithNewAddress(String username, String expectedAddress) {
         Trainee updatedTrainee = traineeDAO.findByUsername(username).orElseThrow();
         assertThat(updatedTrainee.getAddress()).isEqualTo(expectedAddress);
     }
 
     @Then("a workload message for trainer {string} with action {string} and duration {int} should be sent to the queue")
-    public void a_workload_message_for_trainer_with_action_and_duration_should_be_sent(String trainerUsername, String action, int duration) {
+    public void workloadMessageShouldBeSent(String trainerUsername, String action, int duration) {
         TrainerWorkloadRequest receivedMessage = await().atMost(5, TimeUnit.SECONDS)
                 .until(() -> testJmsListener.getReceivedMessages().poll(), java.util.Objects::nonNull);
 

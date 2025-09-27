@@ -26,7 +26,6 @@
         <module>trainer-workload</module>
         <module>gym-crm</module>
         <module>integration-testing</module>
-        <module>integration-testing</module>
     </modules>
 
 </project>
