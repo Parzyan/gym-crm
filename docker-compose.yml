@@ -1,0 +1,82 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres
+    environment:
+      POSTGRES_DB: gym_db
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - crm_network
+
+  mongo:
+    image: mongo:latest
+    container_name: mongo
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: user
+      MONGO_INITDB_ROOT_PASSWORD: password
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - crm_network
+
+  activemq:
+    image: apache/activemq-classic:latest
+    container_name: activemq
+    ports:
+      - "61616:61616"
+      - "8161:8161"
+    networks:
+      - crm_network
+
+  gym-crm:
+    build:
+      context: .
+      dockerfile: gym-crm/Dockerfile
+    container_name: gym-crm
+    depends_on:
+      - postgres
+      - activemq
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=local
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/gym_db
+      - SPRING_DATASOURCE_USERNAME=user
+      - SPRING_DATASOURCE_PASSWORD=password
+      - SPRING_ACTIVEMQ_BROKER_URL=tcp://activemq:61616
+      - JWT_SECRET=${JWT_SECRET}
+    networks:
+      - crm_network
+
+  trainer-workload:
+    build:
+      context: .
+      dockerfile: trainer-workload/Dockerfile
+    container_name: trainer-workload
+    depends_on:
+      - mongo
+      - activemq
+    ports:
+      - "8081:8081"
+    environment:
+      - SPRING_PROFILES_ACTIVE=local
+      - SPRING_DATA_MONGODB_URI=mongodb://user:password@mongo:27017/trainer_db?authSource=admin
+      - SPRING_ACTIVEMQ_BROKER_URL=tcp://activemq:61616
+      - JWT_SECRET=${JWT_SECRET}
+    networks:
+      - crm_network
+
+networks:
+  crm_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  mongo_data:
